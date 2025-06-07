@@ -1,8 +1,3 @@
-// Generate unique IDs
-export const generateId = (): string => {
-  return Date.now().toString(36) + Math.random().toString(36).substring(2);
-};
-
 // Format date to readable string
 export const formatDate = (dateString: string): string => {
   const date = new Date(dateString);
@@ -66,6 +61,7 @@ export const htmlToPlainText = (html: string): string => {
 
 // Get domain from URL
 export const getDomainFromUrl = (url: string): string => {
+  if (!url) return '';
   try {
     const domain = new URL(url.startsWith('http') ? url : `https://${url}`);
     return domain.hostname;

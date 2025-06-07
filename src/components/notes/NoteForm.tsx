@@ -3,39 +3,34 @@ import { Save, X } from 'lucide-react';
 import Button from '../ui/Button';
 import Input from '../ui/Input';
 import RichTextEditor from '../ui/RichTextEditor';
-import { Reminder } from '../../types';
-import { createReminder, updateReminder, deleteReminder } from '../../lib/database';
+import { Note } from '../../types';
+import { createNote, updateNote, deleteNote } from '../../lib/database';
 import { supabase } from '../../lib/supabase';
 
-interface ReminderFormProps {
-  reminder?: Reminder;
+interface NoteFormProps {
+  note?: Note;
   accountId: string;
   onSuccess: () => void;
   onCancel: () => void;
 }
 
-const ReminderForm: React.FC<ReminderFormProps> = ({
-  reminder,
+const NoteForm: React.FC<NoteFormProps> = ({
+  note,
   accountId,
   onSuccess,
   onCancel,
 }) => {
-  const [title, setTitle] = useState(reminder?.title || '');
-  const [content, setContent] = useState(reminder?.content || '');
-  const [date, setDate] = useState(
-    reminder?.date 
-      ? new Date(reminder.date).toISOString().slice(0, 16)
-      : new Date().toISOString().slice(0, 16)
-  );
-  const [completed, setCompleted] = useState(reminder?.completed || false);
+  const [title, setTitle] = useState(note?.title || '');
+  const [content, setContent] = useState(note?.content || '');
+  const [type, setType] = useState<'regular' | 'report'>(note?.type || 'regular');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!title || !content || !date) {
-      setError('Title, content, and date are required');
+    if (!title || !content) {
+      setError('Title and content are required');
       return;
     }
     
@@ -46,23 +41,19 @@ const ReminderForm: React.FC<ReminderFormProps> = ({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
-      const reminderDate = new Date(date).toISOString();
-      
-      if (reminder) {
-        await updateReminder(reminder.id, {
+      if (note) {
+        await updateNote(note.id, {
           title,
           content,
-          date: reminderDate,
-          completed,
+          type,
         });
       } else {
-        await createReminder({
+        await createNote({
           account_id: accountId,
           author_id: user.id,
           title,
           content,
-          date: reminderDate,
-          completed: false,
+          type,
         });
       }
       
@@ -75,12 +66,12 @@ const ReminderForm: React.FC<ReminderFormProps> = ({
   };
 
   const handleDelete = async () => {
-    if (!reminder) return;
+    if (!note) return;
     
-    if (window.confirm('Are you sure you want to delete this reminder?')) {
+    if (window.confirm('Are you sure you want to delete this note?')) {
       setLoading(true);
       try {
-        await deleteReminder(reminder.id);
+        await deleteNote(note.id);
         onSuccess();
       } catch (err: any) {
         setError(err.message);
@@ -94,9 +85,9 @@ const ReminderForm: React.FC<ReminderFormProps> = ({
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
         <h3 className="text-lg font-medium">
-          {reminder ? 'Edit Reminder' : 'Add New Reminder'}
+          {note ? 'Edit Note' : 'Add New Note'}
         </h3>
-        {reminder && (
+        {note && (
           <Button
             variant="danger"
             size="sm"
@@ -115,51 +106,37 @@ const ReminderForm: React.FC<ReminderFormProps> = ({
       )}
       
       <form onSubmit={handleSubmit}>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
           <Input
-            label="Reminder Title"
+            label="Note Title"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="Reminder title"
+            placeholder="Title"
             fullWidth
+            className="md:col-span-2"
             required
           />
           
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Due Date & Time
+              Note Type
             </label>
-            <input
-              type="datetime-local"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
+            <select
+              value={type}
+              onChange={(e) => setType(e.target.value as 'regular' | 'report')}
               className="w-full px-4 py-2 rounded-md border border-gray-300 dark:border-gray-600 focus:ring-blue-500 focus:outline-none focus:ring-2 focus:border-transparent bg-white dark:bg-gray-800"
-              required
-            />
+            >
+              <option value="regular">Regular Note</option>
+              <option value="report">Report</option>
+            </select>
           </div>
         </div>
         
-        {reminder && (
-          <div className="mb-4">
-            <label className="flex items-center">
-              <input
-                type="checkbox"
-                checked={completed}
-                onChange={(e) => setCompleted(e.target.checked)}
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-              />
-              <span className="ml-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-                Mark as completed
-              </span>
-            </label>
-          </div>
-        )}
-        
         <RichTextEditor
-          label="Reminder Content"
+          label="Note Content"
           initialValue={content}
           onChange={setContent}
-          placeholder="Write your reminder details..."
+          placeholder="Write your note..."
         />
         
         <div className="flex justify-end mt-6 space-x-3">
@@ -179,7 +156,7 @@ const ReminderForm: React.FC<ReminderFormProps> = ({
             leftIcon={<Save size={16} />}
             isLoading={loading}
           >
-            {reminder ? 'Update Reminder' : 'Save Reminder'}
+            {note ? 'Update Note' : 'Save Note'}
           </Button>
         </div>
       </form>
@@ -187,4 +164,4 @@ const ReminderForm: React.FC<ReminderFormProps> = ({
   );
 };
 
-export default ReminderForm;
+export default NoteForm;

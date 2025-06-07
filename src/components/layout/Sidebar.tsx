@@ -1,14 +1,10 @@
 import React from 'react';
 import { 
   Home, 
-  Key, 
-  Clock, 
-  Users, 
   Settings, 
   ChevronRight, 
   ChevronLeft
 } from 'lucide-react';
-import { getUserSettings } from '../../utils/storage';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -25,9 +21,6 @@ const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: <Home size={20} /> },
-    { id: 'accounts', label: 'Accounts', icon: <Key size={20} /> },
-    { id: 'reminders', label: 'Reminders', icon: <Clock size={20} /> },
-    { id: 'assistants', label: 'Assistants', icon: <Users size={20} /> },
     { id: 'settings', label: 'Settings', icon: <Settings size={20} /> },
   ];
 

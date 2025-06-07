@@ -1,26 +1,30 @@
 import React, { useState } from 'react';
-import { User, UserPlus, X } from 'lucide-react';
+import { User, UserPlus, X, ArrowLeft } from 'lucide-react';
 import Button from '../ui/Button';
 import Input from '../ui/Input';
-import { Workspace, WorkspaceMember, WorkspaceRole } from '../../types';
+import { Workspace, WorkspaceRole } from '../../types';
 import { formatDate } from '../../utils/helpers';
+import { inviteWorkspaceMember, removeWorkspaceMember } from '../../lib/database';
 
 interface WorkspaceMembersProps {
   workspace: Workspace;
   onInviteMember: (email: string, role: WorkspaceRole) => void;
   onRemoveMember: (userId: string) => void;
+  onBack: () => void;
 }
 
 const WorkspaceMembers: React.FC<WorkspaceMembersProps> = ({
   workspace,
   onInviteMember,
   onRemoveMember,
+  onBack,
 }) => {
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<WorkspaceRole>('assistant');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleInvite = (e: React.FormEvent) => {
+  const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!email) {
@@ -28,15 +32,48 @@ const WorkspaceMembers: React.FC<WorkspaceMembersProps> = ({
       return;
     }
     
-    onInviteMember(email, role);
-    setEmail('');
+    setLoading(true);
     setError('');
+    
+    try {
+      await inviteWorkspaceMember(workspace.id, email, role);
+      setEmail('');
+      onInviteMember(email, role);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRemove = async (userId: string) => {
+    if (window.confirm('Are you sure you want to remove this member?')) {
+      try {
+        await removeWorkspaceMember(workspace.id, userId);
+        onRemoveMember(userId);
+      } catch (err: any) {
+        setError(err.message);
+      }
+    }
   };
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md">
       <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-        <h2 className="text-xl font-semibold">Workspace Members</h2>
+        <div className="flex items-center mb-4">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="mr-2"
+            onClick={onBack}
+          >
+            <ArrowLeft size={16} />
+          </Button>
+          <h2 className="text-xl font-semibold">Workspace Members</h2>
+        </div>
+        <p className="text-gray-600 dark:text-gray-300">
+          Manage who has access to {workspace.name}
+        </p>
       </div>
       
       <div className="p-6">
@@ -76,6 +113,7 @@ const WorkspaceMembers: React.FC<WorkspaceMembersProps> = ({
               type="submit"
               variant="primary"
               leftIcon={<UserPlus size={16} />}
+              isLoading={loading}
             >
               Invite Member
             </Button>
@@ -83,9 +121,10 @@ const WorkspaceMembers: React.FC<WorkspaceMembersProps> = ({
         </form>
         
         <div className="space-y-4">
-          {workspace.members.map((member) => (
+          <h3 className="text-lg font-medium">Current Members</h3>
+          {workspace.workspace_members?.map((member) => (
             <div
-              key={member.userId}
+              key={member.user_id}
               className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-900 rounded-lg"
             >
               <div className="flex items-center">
@@ -93,7 +132,7 @@ const WorkspaceMembers: React.FC<WorkspaceMembersProps> = ({
                   <User size={20} className="text-blue-600 dark:text-blue-400" />
                 </div>
                 <div className="ml-4">
-                  <p className="font-medium">{member.userId}</p>
+                  <p className="font-medium">{member.user?.email}</p>
                   <p className="text-sm text-gray-500 dark:text-gray-400">
                     {member.role.charAt(0).toUpperCase() + member.role.slice(1)}
                   </p>
@@ -102,14 +141,14 @@ const WorkspaceMembers: React.FC<WorkspaceMembersProps> = ({
               
               <div className="flex items-center space-x-4">
                 <span className="text-sm text-gray-500 dark:text-gray-400">
-                  Joined {formatDate(member.createdAt)}
+                  Joined {formatDate(member.created_at)}
                 </span>
                 
                 {member.role !== 'owner' && (
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => onRemoveMember(member.userId)}
+                    onClick={() => handleRemove(member.user_id)}
                     aria-label="Remove member"
                   >
                     <X size={16} className="text-red-500" />

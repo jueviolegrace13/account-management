@@ -1,33 +1,33 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Save, X } from 'lucide-react';
 import Button from '../ui/Button';
 import Input from '../ui/Input';
-import RichTextEditor from '../ui/RichTextEditor';
-import { Account, Note } from '../../types';
-import { generateId, createDateString } from '../../utils/helpers';
+import { Account, Workspace, WorkspaceMember } from '../../types';
+import { createAccount, updateAccount, getWorkspaces } from '../../lib/database';
 
 interface AccountFormProps {
   account?: Account;
-  onSave: (account: Account) => void;
+  workspace: Workspace;
+  onSave: () => void;
   onCancel: () => void;
-  assistantIds?: string[];
 }
 
 const AccountForm: React.FC<AccountFormProps> = ({
   account,
+  workspace,
   onSave,
   onCancel,
-  assistantIds = [],
 }) => {
   const [name, setName] = useState(account?.name || '');
   const [username, setUsername] = useState(account?.username || '');
   const [website, setWebsite] = useState(account?.website || '');
-  const [noteTitle, setNoteTitle] = useState('');
-  const [noteContent, setNoteContent] = useState('');
-  const [noteType, setNoteType] = useState<'regular' | 'report'>('regular');
+  const [assignedTo, setAssignedTo] = useState<string[]>(account?.assigned_to || []);
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const assistants = workspace.workspace_members?.filter(member => member.role === 'assistant') || [];
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!name || !username) {
@@ -35,51 +35,42 @@ const AccountForm: React.FC<AccountFormProps> = ({
       return;
     }
     
-    const now = createDateString();
+    setLoading(true);
+    setError('');
     
-    const updatedAccount: Account = {
-      id: account?.id || generateId(),
-      name,
-      username,
-      website,
-      notes: account?.notes || [],
-      assistantIds: account?.assistantIds || assistantIds,
-      createdAt: account?.createdAt || now,
-      updatedAt: now,
-    };
-    
-    onSave(updatedAccount);
+    try {
+      if (account) {
+        await updateAccount(account.id, {
+          name,
+          username,
+          website: website || undefined,
+          assigned_to: assignedTo,
+        });
+      } else {
+        await createAccount({
+          user_id: workspace.owner_id,
+          workspace_id: workspace.id,
+          name,
+          username,
+          website: website || undefined,
+          assigned_to: assignedTo,
+        });
+      }
+      
+      onSave();
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleAddNote = () => {
-    if (!noteTitle || !noteContent) {
-      setError('Note title and content are required');
-      return;
-    }
-
-    if (!account) return;
-    
-    const newNote: Note = {
-      id: generateId(),
-      title: noteTitle,
-      content: noteContent,
-      type: noteType,
-      createdAt: createDateString(),
-    };
-    
-    const updatedAccount: Account = {
-      ...account,
-      notes: [...account.notes, newNote],
-      updatedAt: createDateString(),
-    };
-    
-    onSave(updatedAccount);
-    
-    // Reset note form
-    setNoteTitle('');
-    setNoteContent('');
-    setNoteType('regular');
-    setError('');
+  const toggleAssignment = (userId: string) => {
+    setAssignedTo(prev => 
+      prev.includes(userId)
+        ? prev.filter(id => id !== userId)
+        : [...prev, userId]
+    );
   };
 
   return (
@@ -124,12 +115,39 @@ const AccountForm: React.FC<AccountFormProps> = ({
           />
         </div>
         
+        {assistants.length > 0 && (
+          <div className="mt-6">
+            <h3 className="text-lg font-medium mb-3">Assign to Assistants</h3>
+            <div className="bg-gray-50 dark:bg-gray-900 p-4 rounded-md max-h-60 overflow-y-auto">
+              {assistants.map((member) => (
+                <div key={member.user_id} className="mb-2 last:mb-0">
+                  <label className="flex items-center p-3 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={assignedTo.includes(member.user_id)}
+                      onChange={() => toggleAssignment(member.user_id)}
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    />
+                    <span className="ml-3">
+                      <span className="block font-medium">{member.user?.email}</span>
+                      <span className="block text-sm text-gray-500 dark:text-gray-400 capitalize">
+                        {member.role}
+                      </span>
+                    </span>
+                  </label>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        
         <div className="flex justify-end mt-6 space-x-3">
           <Button
             type="button"
             variant="outline"
             onClick={onCancel}
             leftIcon={<X size={16} />}
+            disabled={loading}
           >
             Cancel
           </Button>
@@ -138,59 +156,12 @@ const AccountForm: React.FC<AccountFormProps> = ({
             type="submit"
             variant="primary"
             leftIcon={<Save size={16} />}
+            isLoading={loading}
           >
             {account ? 'Update Account' : 'Save Account'}
           </Button>
         </div>
       </form>
-      
-      {account && (
-        <div className="mt-8 border-t pt-6">
-          <h3 className="text-lg font-medium mb-4">Add Note</h3>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-            <Input
-              label="Note Title"
-              value={noteTitle}
-              onChange={(e) => setNoteTitle(e.target.value)}
-              placeholder="Title"
-              fullWidth
-              className="md:col-span-2"
-            />
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Note Type
-              </label>
-              <select
-                value={noteType}
-                onChange={(e) => setNoteType(e.target.value as 'regular' | 'report')}
-                className="w-full px-4 py-2 rounded-md border border-gray-300 dark:border-gray-600 focus:ring-blue-500 focus:outline-none focus:ring-2 focus:border-transparent bg-white dark:bg-gray-800"
-              >
-                <option value="regular">Regular Note</option>
-                <option value="report">Report</option>
-              </select>
-            </div>
-          </div>
-          
-          <RichTextEditor
-            label="Note Content"
-            initialValue={noteContent}
-            onChange={setNoteContent}
-            placeholder="Write your note..."
-          />
-          
-          <div className="flex justify-end mt-4">
-            <Button
-              type="button"
-              variant="primary"
-              onClick={handleAddNote}
-            >
-              Add Note
-            </Button>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

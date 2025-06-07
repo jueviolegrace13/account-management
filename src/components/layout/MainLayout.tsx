@@ -1,10 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Header from './Header';
 import Sidebar from './Sidebar';
-import Dashboard from '../../pages/Dashboard';
-import Accounts from '../../pages/Accounts';
-import Reminders from '../../pages/Reminders';
-import Assistants from '../../pages/Assistants';
+import WorkspaceDashboard from '../../pages/WorkspaceDashboard';
 import Settings from '../../pages/Settings';
 import { getUserSettings, toggleSidebar } from '../../utils/storage';
 
@@ -31,17 +28,11 @@ const MainLayout: React.FC = () => {
   const renderPage = () => {
     switch (activePage) {
       case 'dashboard':
-        return <Dashboard />;
-      case 'accounts':
-        return <Accounts />;
-      case 'reminders':
-        return <Reminders />;
-      case 'assistants':
-        return <Assistants />;
+        return <WorkspaceDashboard />;
       case 'settings':
         return <Settings />;
       default:
-        return <Dashboard />;
+        return <WorkspaceDashboard />;
     }
   };
 

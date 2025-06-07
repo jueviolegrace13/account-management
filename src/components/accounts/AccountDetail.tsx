@@ -1,69 +1,195 @@
 import React, { useState } from 'react';
-import { ExternalLink, Copy, Edit, Clock, Users, ArrowLeft } from 'lucide-react';
+import { ExternalLink, Copy, Edit, Clock, Users, ArrowLeft, Plus, MessageSquare } from 'lucide-react';
 import Button from '../ui/Button';
 import Badge from '../ui/Badge';
-import { Account, Assistant, Note } from '../../types';
+import NoteForm from '../notes/NoteForm';
+import ReminderForm from '../reminders/ReminderForm';
+import { Account, Note, Reminder } from '../../types';
 import { formatDate, formatDateTime, getDomainFromUrl } from '../../utils/helpers';
 
 interface AccountDetailProps {
   account: Account;
-  assistants: Assistant[];
   onBack: () => void;
   onEdit: (account: Account) => void;
-  onAddReminder: (accountId: string) => void;
+  onAccountUpdate: () => void;
 }
 
 const AccountDetail: React.FC<AccountDetailProps> = ({
   account,
-  assistants,
   onBack,
   onEdit,
-  onAddReminder,
+  onAccountUpdate,
 }) => {
-  const [activeTab, setActiveTab] = useState<'notes' | 'details'>('notes');
+  const [activeTab, setActiveTab] = useState<'notes' | 'reminders' | 'details'>('notes');
+  const [showNoteForm, setShowNoteForm] = useState(false);
+  const [showReminderForm, setShowReminderForm] = useState(false);
+  const [editingNote, setEditingNote] = useState<Note | null>(null);
+  const [editingReminder, setEditingReminder] = useState<Reminder | null>(null);
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
-    // Could add a toast notification here
+  };
+
+  const handleNoteSuccess = () => {
+    setShowNoteForm(false);
+    setEditingNote(null);
+    onAccountUpdate();
+  };
+
+  const handleReminderSuccess = () => {
+    setShowReminderForm(false);
+    setEditingReminder(null);
+    onAccountUpdate();
   };
 
   const renderNotes = () => {
-    if (account.notes.length === 0) {
+    const notes = account.notes || [];
+    
+    if (showNoteForm) {
       return (
-        <div className="p-6 text-center text-gray-500 dark:text-gray-400">
-          No notes have been added to this account yet.
-        </div>
+        <NoteForm
+          note={editingNote || undefined}
+          accountId={account.id}
+          onSuccess={handleNoteSuccess}
+          onCancel={() => {
+            setShowNoteForm(false);
+            setEditingNote(null);
+          }}
+        />
       );
     }
 
     return (
-      <div className="divide-y divide-gray-200 dark:divide-gray-700">
-        {account.notes.map((note) => (
-          <div key={note.id} className="p-4">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-lg font-medium">{note.title}</h3>
-              <Badge variant={note.type === 'report' ? 'danger' : 'primary'}>
-                {note.type === 'report' ? 'Report' : 'Note'}
-              </Badge>
-            </div>
-            <div 
-              className="prose dark:prose-invert prose-sm max-w-none" 
-              dangerouslySetInnerHTML={{ __html: note.content }} 
-            />
-            <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-              Added on {formatDateTime(note.createdAt)}
-            </div>
+      <div>
+        <div className="flex justify-between items-center mb-4 p-4 border-b border-gray-200 dark:border-gray-700">
+          <h3 className="text-lg font-medium">Notes ({notes.length})</h3>
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={() => setShowNoteForm(true)}
+            leftIcon={<Plus size={16} />}
+          >
+            Add Note
+          </Button>
+        </div>
+        
+        {notes.length === 0 ? (
+          <div className="p-6 text-center text-gray-500 dark:text-gray-400">
+            No notes have been added to this account yet.
           </div>
-        ))}
+        ) : (
+          <div className="divide-y divide-gray-200 dark:divide-gray-700">
+            {notes.map((note) => (
+              <div key={note.id} className="p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-lg font-medium">{note.title}</h4>
+                  <div className="flex items-center space-x-2">
+                    <Badge variant={note.type === 'report' ? 'danger' : 'primary'}>
+                      {note.type === 'report' ? 'Report' : 'Note'}
+                    </Badge>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setEditingNote(note);
+                        setShowNoteForm(true);
+                      }}
+                    >
+                      <Edit size={14} />
+                    </Button>
+                  </div>
+                </div>
+                <div 
+                  className="prose dark:prose-invert prose-sm max-w-none mb-2" 
+                  dangerouslySetInnerHTML={{ __html: note.content }} 
+                />
+                <div className="text-xs text-gray-500 dark:text-gray-400">
+                  Added by {note.author?.email} on {formatDateTime(note.created_at)}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const renderReminders = () => {
+    const reminders = account.reminders || [];
+    
+    if (showReminderForm) {
+      return (
+        <ReminderForm
+          reminder={editingReminder || undefined}
+          accountId={account.id}
+          onSuccess={handleReminderSuccess}
+          onCancel={() => {
+            setShowReminderForm(false);
+            setEditingReminder(null);
+          }}
+        />
+      );
+    }
+
+    return (
+      <div>
+        <div className="flex justify-between items-center mb-4 p-4 border-b border-gray-200 dark:border-gray-700">
+          <h3 className="text-lg font-medium">Reminders ({reminders.length})</h3>
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={() => setShowReminderForm(true)}
+            leftIcon={<Plus size={16} />}
+          >
+            Add Reminder
+          </Button>
+        </div>
+        
+        {reminders.length === 0 ? (
+          <div className="p-6 text-center text-gray-500 dark:text-gray-400">
+            No reminders have been set for this account yet.
+          </div>
+        ) : (
+          <div className="divide-y divide-gray-200 dark:divide-gray-700">
+            {reminders.map((reminder) => (
+              <div key={reminder.id} className="p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-lg font-medium">{reminder.title}</h4>
+                  <div className="flex items-center space-x-2">
+                    <Badge variant={reminder.completed ? 'success' : 'warning'}>
+                      {reminder.completed ? 'Completed' : 'Pending'}
+                    </Badge>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setEditingReminder(reminder);
+                        setShowReminderForm(true);
+                      }}
+                    >
+                      <Edit size={14} />
+                    </Button>
+                  </div>
+                </div>
+                <div 
+                  className="prose dark:prose-invert prose-sm max-w-none mb-2" 
+                  dangerouslySetInnerHTML={{ __html: reminder.content }} 
+                />
+                <div className="text-sm text-gray-600 dark:text-gray-300 mb-1">
+                  Due: {formatDateTime(reminder.date)}
+                </div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">
+                  Created by {reminder.author?.email} on {formatDateTime(reminder.created_at)}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     );
   };
 
   const renderAccountDetails = () => {
-    const assignedAssistants = assistants.filter(assistant => 
-      account.assistantIds.includes(assistant.id)
-    );
-
     return (
       <div className="p-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -73,43 +199,33 @@ const AccountDetail: React.FC<AccountDetailProps> = ({
               <tbody>
                 <tr>
                   <td className="py-2 pr-4 font-medium text-gray-500 dark:text-gray-400">Created</td>
-                  <td>{formatDateTime(account.createdAt)}</td>
+                  <td>{formatDateTime(account.created_at)}</td>
                 </tr>
                 <tr>
                   <td className="py-2 pr-4 font-medium text-gray-500 dark:text-gray-400">Updated</td>
-                  <td>{formatDateTime(account.updatedAt)}</td>
+                  <td>{formatDateTime(account.updated_at)}</td>
                 </tr>
                 <tr>
                   <td className="py-2 pr-4 font-medium text-gray-500 dark:text-gray-400">Notes</td>
-                  <td>{account.notes.length}</td>
+                  <td>{account.notes?.length || 0}</td>
                 </tr>
                 <tr>
-                  <td className="py-2 pr-4 font-medium text-gray-500 dark:text-gray-400">Reports</td>
-                  <td>{account.notes.filter(note => note.type === 'report').length}</td>
+                  <td className="py-2 pr-4 font-medium text-gray-500 dark:text-gray-400">Reminders</td>
+                  <td>{account.reminders?.length || 0}</td>
                 </tr>
               </tbody>
             </table>
           </div>
           
           <div>
-            <h3 className="text-lg font-medium mb-4">Assigned Assistants</h3>
-            {assignedAssistants.length > 0 ? (
-              <ul className="space-y-2">
-                {assignedAssistants.map(assistant => (
-                  <li key={assistant.id} className="flex items-center p-2 bg-gray-50 dark:bg-gray-800 rounded-md">
-                    <div className="w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-900 flex items-center justify-center mr-3">
-                      <Users size={16} className="text-purple-600 dark:text-purple-300" />
-                    </div>
-                    <div>
-                      <div className="font-medium">{assistant.name}</div>
-                      <div className="text-sm text-gray-500 dark:text-gray-400">{assistant.email}</div>
-                    </div>
-                  </li>
-                ))}
-              </ul>
+            <h3 className="text-lg font-medium mb-4">Assignment</h3>
+            {account.assigned_to.length > 0 ? (
+              <p className="text-gray-600 dark:text-gray-300">
+                Assigned to {account.assigned_to.length} assistant{account.assigned_to.length !== 1 ? 's' : ''}
+              </p>
             ) : (
               <p className="text-gray-500 dark:text-gray-400">
-                No assistants have been assigned to this account.
+                Not assigned to any assistants
               </p>
             )}
           </div>
@@ -166,14 +282,7 @@ const AccountDetail: React.FC<AccountDetailProps> = ({
             )}
           </div>
           
-          <div className="flex space-x-2">
-            <Button
-              variant="outline"
-              onClick={() => onAddReminder(account.id)}
-              leftIcon={<Clock size={16} />}
-            >
-              Add Reminder
-            </Button>
+          <div>
             <Button
               variant="primary"
               onClick={() => onEdit(account)}
@@ -196,7 +305,20 @@ const AccountDetail: React.FC<AccountDetailProps> = ({
             }`}
             onClick={() => setActiveTab('notes')}
           >
-            Notes ({account.notes.length})
+            <MessageSquare size={16} className="inline mr-2" />
+            Notes ({account.notes?.length || 0})
+          </button>
+          
+          <button
+            className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === 'reminders'
+                ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+            }`}
+            onClick={() => setActiveTab('reminders')}
+          >
+            <Clock size={16} className="inline mr-2" />
+            Reminders ({account.reminders?.length || 0})
           </button>
           
           <button
@@ -213,7 +335,9 @@ const AccountDetail: React.FC<AccountDetailProps> = ({
       </div>
       
       {/* Tab Content */}
-      {activeTab === 'notes' ? renderNotes() : renderAccountDetails()}
+      {activeTab === 'notes' && renderNotes()}
+      {activeTab === 'reminders' && renderReminders()}
+      {activeTab === 'details' && renderAccountDetails()}
     </div>
   );
 };

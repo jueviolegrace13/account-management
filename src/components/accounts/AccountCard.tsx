@@ -1,5 +1,5 @@
 import React from 'react';
-import { ExternalLink, Edit, Trash, FileText, AlertCircle } from 'lucide-react';
+import { ExternalLink, Edit, Trash, FileText, AlertCircle, Clock } from 'lucide-react';
 import Card, { CardContent, CardFooter, CardHeader, CardTitle } from '../ui/Card';
 import Badge from '../ui/Badge';
 import Button from '../ui/Button';
@@ -19,23 +19,32 @@ const AccountCard: React.FC<AccountCardProps> = ({
   onDelete,
   onView,
 }) => {
-  const { id, name, username, website, notes, createdAt } = account;
-  const domain = getDomainFromUrl(website);
+  const { id, name, username, website, notes, reminders, created_at } = account;
+  const domain = getDomainFromUrl(website || '');
   
-  // Count reports
-  const reportCount = notes.filter(note => note.type === 'report').length;
+  // Count reports and pending reminders
+  const reportCount = notes?.filter(note => note.type === 'report').length || 0;
+  const pendingReminders = reminders?.filter(reminder => !reminder.completed).length || 0;
 
   return (
     <Card hoverable onClick={() => onView(account)} className="h-full flex flex-col">
       <CardHeader>
         <div className="flex justify-between items-start">
           <CardTitle className="truncate">{name}</CardTitle>
-          {reportCount > 0 && (
-            <Badge variant="danger" className="ml-2 flex items-center gap-1">
-              <AlertCircle size={12} />
-              {reportCount}
-            </Badge>
-          )}
+          <div className="flex space-x-1">
+            {reportCount > 0 && (
+              <Badge variant="danger" className="flex items-center gap-1">
+                <AlertCircle size={12} />
+                {reportCount}
+              </Badge>
+            )}
+            {pendingReminders > 0 && (
+              <Badge variant="warning" className="flex items-center gap-1">
+                <Clock size={12} />
+                {pendingReminders}
+              </Badge>
+            )}
+          </div>
         </div>
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 truncate">
           {username}
@@ -58,26 +67,32 @@ const AccountCard: React.FC<AccountCardProps> = ({
           </div>
         )}
         
-        {notes.length > 0 ? (
-          <div>
-            <div className="flex items-center text-sm mb-2">
+        <div className="space-y-2">
+          {(notes?.length || 0) > 0 && (
+            <div className="flex items-center text-sm">
               <FileText size={14} className="mr-2" />
-              <span className="font-medium">{notes.length} Notes</span>
+              <span className="font-medium">{notes?.length} Notes</span>
             </div>
-            <p className="text-sm text-gray-600 dark:text-gray-300">
-              {truncateText(notes[notes.length - 1].title, 30)}
+          )}
+          
+          {(reminders?.length || 0) > 0 && (
+            <div className="flex items-center text-sm">
+              <Clock size={14} className="mr-2" />
+              <span className="font-medium">{reminders?.length} Reminders</span>
+            </div>
+          )}
+          
+          {(!notes?.length && !reminders?.length) && (
+            <p className="text-sm text-gray-500 dark:text-gray-400 italic">
+              No notes or reminders yet
             </p>
-          </div>
-        ) : (
-          <p className="text-sm text-gray-500 dark:text-gray-400 italic">
-            No notes added
-          </p>
-        )}
+          )}
+        </div>
       </CardContent>
       
       <CardFooter className="border-t border-gray-200 dark:border-gray-700 flex justify-between items-center">
         <span className="text-xs text-gray-500 dark:text-gray-400">
-          Added {formatDate(createdAt)}
+          Added {formatDate(created_at)}
         </span>
         
         <div className="flex space-x-2">

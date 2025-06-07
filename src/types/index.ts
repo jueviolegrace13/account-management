@@ -4,56 +4,71 @@ export type WorkspaceRole = 'owner' | 'assistant';
 export interface User {
   id: string;
   email: string;
-  theme: 'light' | 'dark';
-  sidebarCollapsed: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface Workspace {
   id: string;
-  ownerId: string;
+  owner_id: string;
   name: string;
-  createdAt: string;
-  updatedAt: string;
-  members: WorkspaceMember[];
+  created_at: string;
+  updated_at: string;
+  workspace_members?: WorkspaceMember[];
 }
 
 export interface WorkspaceMember {
-  workspaceId: string;
-  userId: string;
+  workspace_id: string;
+  user_id: string;
   role: WorkspaceRole;
-  createdAt: string;
+  created_at: string;
+  user?: {
+    email: string;
+  };
 }
 
 export interface Account {
   id: string;
-  workspaceId: string;
+  user_id: string;
+  workspace_id: string;
   name: string;
   username: string;
-  website: string;
-  assignedTo: string[];
-  notes: Note[];
-  reminders: Reminder[];
-  createdAt: string;
-  updatedAt: string;
+  website?: string;
+  assigned_to: string[];
+  created_at: string;
+  updated_at: string;
+  notes?: Note[];
+  reminders?: Reminder[];
 }
 
 export interface Note {
   id: string;
-  accountId: string;
-  authorId: string;
+  account_id: string;
+  author_id: string;
   title: string;
   content: string;
   type: NoteType;
-  createdAt: string;
+  created_at: string;
+  author?: {
+    email: string;
+  };
 }
 
 export interface Reminder {
   id: string;
-  accountId: string;
-  authorId: string;
+  account_id: string;
+  author_id: string;
   title: string;
   content: string;
   date: string;
   completed: boolean;
-  createdAt: string;
+  created_at: string;
+  author?: {
+    email: string;
+  };
+}
+
+export interface UserSettings {
+  theme: 'light' | 'dark';
+  sidebarCollapsed: boolean;
 }
