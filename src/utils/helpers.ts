@@ -74,3 +74,9 @@ export const getDomainFromUrl = (url: string): string => {
 export const createDateString = (): string => {
   return new Date().toISOString();
 };
+
+
+// Create a new date string in ISO format
+export const generateId() = (): string => {
+  return 'id-' + Math.random().toString(36).substr(2, 9) + '-' + Date.now();
+}
