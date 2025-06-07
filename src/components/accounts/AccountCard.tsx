@@ -33,7 +33,7 @@ const AccountCard: React.FC<AccountCardProps> = ({
           <CardTitle className="truncate">{name}</CardTitle>
           <div className="flex space-x-1">
             {reportCount > 0 && (
-              <Badge variant="danger" className="flex items-center gap-1">
+              <Badge variant="danger\" className="flex items-center gap-1">
                 <AlertCircle size={12} />
                 {reportCount}
               </Badge>
