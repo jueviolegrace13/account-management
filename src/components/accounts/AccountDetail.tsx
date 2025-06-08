@@ -9,12 +9,19 @@ import { formatDateTime, getDomainFromUrl } from '../../utils/helpers';
 import Input from '../ui/Input';
 import TextArea from '../ui/TextArea';
 import CryptoJS from 'crypto-js';
-import { getVaultEntries, addVaultEntry } from '../../lib/database';
+import { getVaultEntries, addVaultEntry, updateVaultEntry } from '../../lib/database';
 
 interface AccountDetailProps {
   account: Account;
   onEdit: (account: Account) => void;
   onAccountUpdate: () => void;
+}
+
+interface VaultEntry {
+  id: string;
+  key: string;
+  value: string;
+  created_at?: string;
 }
 
 const AccountDetail: React.FC<AccountDetailProps> = ({
@@ -27,12 +34,16 @@ const AccountDetail: React.FC<AccountDetailProps> = ({
   const [showReminderForm, setShowReminderForm] = useState(false);
   const [editingNote, setEditingNote] = useState<Note | null>(null);
   const [editingReminder, setEditingReminder] = useState<Reminder | null>(null);
-  const [vault, setVault] = useState<{ key: string; value: string }[]>([]);
+  const [vault, setVault] = useState<VaultEntry[]>([]);
   const [showVaultModal, setShowVaultModal] = useState(false);
   const [vaultKey, setVaultKey] = useState('');
   const [vaultValue, setVaultValue] = useState('');
   const [showDecrypted, setShowDecrypted] = useState(false);
   const [vaultLoading, setVaultLoading] = useState(false);
+  const [editingVault, setEditingVault] = useState<VaultEntry | null>(null);
+  const [editVaultKey, setEditVaultKey] = useState('');
+  const [editVaultValue, setEditVaultValue] = useState('');
+  const [showEditVaultModal, setShowEditVaultModal] = useState(false);
 
   const ENCRYPTION_SECRET = import.meta.env.VITE_VAULT_ENCRYPTION_SECRET || '';
 
@@ -67,8 +78,6 @@ const AccountDetail: React.FC<AccountDetailProps> = ({
     try {
       const data = await getVaultEntries(account.id);
       setVault(data || []);
-    } catch (err) {
-      // handle error (optional)
     } finally {
       setVaultLoading(false);
     }
@@ -91,8 +100,29 @@ const AccountDetail: React.FC<AccountDetailProps> = ({
       setVaultValue('');
       setShowVaultModal(false);
       fetchVault();
-    } catch (err) {
-      // handle error (optional)
+    } finally {
+      setVaultLoading(false);
+    }
+  };
+
+  const handleEditVault = (entry: VaultEntry) => {
+    setEditingVault(entry);
+    setEditVaultKey(entry.key);
+    setEditVaultValue(decrypt(entry.value));
+    setShowEditVaultModal(true);
+  };
+
+  const handleSaveEditVault = async () => {
+    if (!editingVault) return;
+    setVaultLoading(true);
+    try {
+      const encryptedValue = encrypt(editVaultValue);
+      await updateVaultEntry(editingVault.id, editVaultKey, encryptedValue);
+      setShowEditVaultModal(false);
+      setEditingVault(null);
+      setEditVaultKey('');
+      setEditVaultValue('');
+      fetchVault();
     } finally {
       setVaultLoading(false);
     }
@@ -321,19 +351,30 @@ const AccountDetail: React.FC<AccountDetailProps> = ({
               <tr>
                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Key</th>
                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Value</th>
+                <th className="px-4 py-2"></th>
               </tr>
             </thead>
             <tbody>
               {vault.length === 0 ? (
                 <tr>
-                  <td colSpan={2} className="px-4 py-6 text-center text-gray-500 dark:text-gray-400">No vault entries yet.</td>
+                  <td colSpan={3} className="px-4 py-6 text-center text-gray-500 dark:text-gray-400">No vault entries yet.</td>
                 </tr>
               ) : (
                 vault.map((entry, idx) => (
-                  <tr key={idx} className="border-b border-gray-200 dark:border-gray-700">
+                  <tr key={entry.id || idx} className="border-b border-gray-200 dark:border-gray-700">
                     <td className="px-4 py-2 font-mono text-sm">{entry.key}</td>
                     <td className="px-4 py-2 font-mono text-sm">
                       {showDecrypted ? decrypt(entry.value) : '********'}
+                    </td>
+                    <td className="px-4 py-2 text-right">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleEditVault(entry)}
+                        aria-label="Edit Vault Entry"
+                      >
+                        <Edit size={14} />
+                      </Button>
                     </td>
                   </tr>
                 ))
@@ -366,6 +407,34 @@ const AccountDetail: React.FC<AccountDetailProps> = ({
             <div className="flex justify-end gap-2 mt-6">
               <Button variant="outline" onClick={() => setShowVaultModal(false)}>Cancel</Button>
               <Button variant="primary" onClick={handleAddVaultEntry} isLoading={vaultLoading}>Save</Button>
+            </div>
+          </div>
+        </div>
+      )}
+      {showEditVaultModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+          <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg w-full max-w-md p-6 relative">
+            <h4 className="text-lg font-semibold mb-4">Edit Vault Entry</h4>
+            <Input
+              label="Key"
+              value={editVaultKey}
+              onChange={e => setEditVaultKey(e.target.value)}
+              placeholder="Enter key name"
+              required
+              fullWidth
+            />
+            <TextArea
+              label="Value"
+              value={editVaultValue}
+              onChange={e => setEditVaultValue(e.target.value)}
+              placeholder="Enter secret value"
+              required
+              fullWidth
+              rows={3}
+            />
+            <div className="flex justify-end gap-2 mt-6">
+              <Button variant="outline" onClick={() => setShowEditVaultModal(false)}>Cancel</Button>
+              <Button variant="primary" onClick={handleSaveEditVault} isLoading={vaultLoading}>Save</Button>
             </div>
           </div>
         </div>
