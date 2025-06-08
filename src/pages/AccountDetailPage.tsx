@@ -3,9 +3,10 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { AlertCircle } from 'lucide-react';
 import AccountDetail from '../components/accounts/AccountDetail';
 import { getAccountById } from '../lib/database';
-import { Account, Workspace } from '../types';
+import { Account } from '../types';
 import Button from '../components/ui/Button';
 import AccountForm from '../components/accounts/AccountForm';
+import { useWorkspaces } from '../contexts/WorkspaceContext';
 
 const AccountDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -14,6 +15,7 @@ const AccountDetailPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showEditModal, setShowEditModal] = useState(false);
+  const { workspaces } = useWorkspaces();
 
   useEffect(() => {
     const fetchAccount = async () => {
@@ -70,8 +72,8 @@ const AccountDetailPage: React.FC = () => {
 
   if (!account) return null;
 
-  // Try to get the workspace from the account object (if available)
-  const workspace = account.workspace || account.workspaces?.[0];
+  // Find the workspace object for this account
+  const workspace = workspaces.find(ws => ws.id === account.workspace_id);
 
   return (
     <div>
@@ -83,7 +85,6 @@ const AccountDetailPage: React.FC = () => {
       <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full">
         <AccountDetail
           account={account}
-          onBack={() => navigate(-1)}
           onEdit={handleEdit}
           onAccountUpdate={() => {}}
         />
@@ -93,7 +94,7 @@ const AccountDetailPage: React.FC = () => {
           <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md">
             <AccountForm
               account={account}
-              workspace={workspace as Workspace}
+              workspace={workspace}
               onSave={handleEditSave}
               onCancel={handleEditCancel}
             />
