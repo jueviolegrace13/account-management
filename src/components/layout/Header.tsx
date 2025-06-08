@@ -1,25 +1,30 @@
 import React from 'react';
-import { Menu, Bell, Moon, Sun, User, LogOut } from 'lucide-react';
+import { Menu, Moon, Sun, User, LogOut } from 'lucide-react';
 import Button from '../ui/Button';
 import { getUserSettings, toggleTheme } from '../../utils/storage';
 import { supabase } from '../../lib/supabase';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
+import WorkspaceSelector from '../workspaces/WorkspaceSelector';
+import { useWorkspaces } from '../../contexts/WorkspaceContext';
 
 interface HeaderProps {
   toggleSidebar: () => void;
+  sidebarOpen: boolean;
 }
 
-const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
+const Header: React.FC<HeaderProps> = ({ toggleSidebar, sidebarOpen }) => {
   const [theme, setTheme] = React.useState<'light' | 'dark'>(getUserSettings().theme);
-  const [user, setUser] = React.useState<any>(null);
+  const { user } = useAuth();
   const navigate = useNavigate();
-  
+  const { workspaces } = useWorkspaces();
+  const [selectedWorkspace, setSelectedWorkspace] = React.useState(workspaces[0] || null);
+
   React.useEffect(() => {
-    // Get current user
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      setUser(user);
-    });
-  }, []);
+    if (workspaces.length > 0 && !selectedWorkspace) {
+      setSelectedWorkspace(workspaces[0]);
+    }
+  }, [workspaces]);
 
   const handleToggleTheme = () => {
     const newSettings = toggleTheme();
@@ -38,7 +43,7 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
 
   return (
     <header className="bg-white dark:bg-gray-900 shadow-sm fixed top-0 left-0 right-0 z-20 transition-all duration-300">
-      <div className="px-4 h-16 flex items-center justify-between">
+      <div className={`px-4 h-16 flex items-center justify-between transition-all duration-300 ${sidebarOpen ? 'md:pl-64' : 'md:pl-20'}`}>
         <div className="flex items-center">
           <Button 
             variant="ghost" 
@@ -55,6 +60,14 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
         </div>
 
         <div className="flex items-center space-x-2">
+          {/* Workspace Switcher */}
+          <div className="w-56">
+            <WorkspaceSelector
+              selectedWorkspace={selectedWorkspace}
+              onWorkspaceSelect={setSelectedWorkspace}
+              onCreateWorkspace={() => {}}
+            />
+          </div>
           <Button 
             variant="ghost" 
             size="sm" 
@@ -63,7 +76,6 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
           >
             {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
           </Button>
-          
           {user && (
             <div className="flex items-center space-x-2">
               <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center">

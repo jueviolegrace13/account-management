@@ -3,8 +3,11 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import MainLayout from './components/layout/MainLayout';
 import Landing from './pages/Landing';
 import { getUserSettings } from './utils/storage';
-import { supabase } from './lib/supabase';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { WorkspaceProvider } from './contexts/WorkspaceContext';
 import InvitationPage from './pages/InvitationPage';
+import AccountDetailPage from './pages/AccountDetailPage';
+import WorkspaceDashboard from './pages/WorkspaceDashboard';
 
 function App() {
   // Initialize theme from stored settings
@@ -18,47 +21,45 @@ function App() {
   }, []);
 
   return (
-    <Router>
-      <Routes>
-        <Route path="/" element={<Landing />} />
-        <Route
-          path="/dashboard/*"
-          element={
-            <PrivateRoute>
-              <MainLayout />
-            </PrivateRoute>
-          }
-        />
-        <Route path="/invitations/:invitationId" element={<InvitationPage />} />
-      </Routes>
-    </Router>
+    <AuthProvider>
+      <WorkspaceProvider>
+        <Router>
+          <Routes>
+            <Route path="/" element={<Landing />} />
+            <Route
+              path="/dashboard/*"
+              element={
+                <PrivateRoute>
+                  <MainLayout />
+                </PrivateRoute>
+              }
+            >
+              <Route index element={<WorkspaceDashboard />} />
+              <Route path="account/:id" element={<AccountDetailPage />} />
+            </Route>
+            <Route path="/invitations/:invitationId" element={<InvitationPage />} />
+          </Routes>
+        </Router>
+      </WorkspaceProvider>
+    </AuthProvider>
   );
 }
 
 const PrivateRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [session, setSession] = React.useState<boolean | null>(null);
+  const { user, loading } = useAuth();
 
-  useEffect(() => {
-    // Check current session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(!!session);
-    });
-
-    // Listen for auth changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, session) => {
-      setSession(!!session);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  if (session === null) {
-    return <div>Loading...</div>;
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
   }
 
-  return session ? <>{children}</> : <Navigate to="/" replace />;
+  return user ? <>{children}</> : <Navigate to="/" replace />;
 };
 
 export default App;

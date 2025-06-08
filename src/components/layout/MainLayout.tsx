@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import Header from './Header';
 import Sidebar from './Sidebar';
-import WorkspaceDashboard from '../../pages/WorkspaceDashboard';
-import Settings from '../../pages/Settings';
 import { getUserSettings, toggleSidebar } from '../../utils/storage';
+import { Outlet } from 'react-router-dom';
 
 const MainLayout: React.FC = () => {
   const [activePage, setActivePage] = useState<string>('dashboard');
@@ -24,21 +23,9 @@ const MainLayout: React.FC = () => {
     setSidebarOpen(!sidebarOpen);
   };
 
-  // Render the active page
-  const renderPage = () => {
-    switch (activePage) {
-      case 'dashboard':
-        return <WorkspaceDashboard />;
-      case 'settings':
-        return <Settings />;
-      default:
-        return <WorkspaceDashboard />;
-    }
-  };
-
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100">
-      <Header toggleSidebar={handleToggleSidebar} />
+      <Header toggleSidebar={handleToggleSidebar} sidebarOpen={sidebarOpen} />
       <Sidebar 
         isOpen={sidebarOpen} 
         onToggle={handleToggleSidebar} 
@@ -52,7 +39,7 @@ const MainLayout: React.FC = () => {
         }`}
       >
         <div className="p-6">
-          {renderPage()}
+          <Outlet />
         </div>
       </main>
     </div>

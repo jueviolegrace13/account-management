@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ExternalLink, Copy, Edit, Clock, Users, ArrowLeft, Plus, MessageSquare } from 'lucide-react';
+import { ExternalLink, Edit, Clock, Users, Plus, MessageSquare } from 'lucide-react';
 import Button from '../ui/Button';
 import Badge from '../ui/Badge';
 import NoteForm from '../notes/NoteForm';
@@ -13,14 +13,12 @@ import { getVaultEntries, addVaultEntry } from '../../lib/database';
 
 interface AccountDetailProps {
   account: Account;
-  onBack: () => void;
   onEdit: (account: Account) => void;
   onAccountUpdate: () => void;
 }
 
 const AccountDetail: React.FC<AccountDetailProps> = ({
   account,
-  onBack,
   onEdit,
   onAccountUpdate,
 }) => {
@@ -37,10 +35,6 @@ const AccountDetail: React.FC<AccountDetailProps> = ({
   const [vaultLoading, setVaultLoading] = useState(false);
 
   const ENCRYPTION_SECRET = import.meta.env.VITE_VAULT_ENCRYPTION_SECRET || '';
-
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-  };
 
   const handleNoteSuccess = () => {
     setShowNoteForm(false);
@@ -383,34 +377,37 @@ const AccountDetail: React.FC<AccountDetailProps> = ({
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden">
       {/* Header */}
       <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-        <div className="flex items-center mb-4">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="mr-2"
-            onClick={onBack}
-          >
-            <ArrowLeft size={16} />
-          </Button>
-          <h2 className="text-xl font-semibold">{account.name}</h2>
+        <div className="mb-4">
+          <h2 className="text-3xl font-extrabold text-blue-600 dark:text-blue-400 mb-2">{account.name}</h2>
+          <div className="text-gray-500 dark:text-gray-300 mb-2">
+            <span className="font-semibold">Username:</span> <span className="font-bold">{account.username}</span>
+            {account.username && (
+              <button
+                className="ml-2 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400"
+                onClick={() => navigator.clipboard.writeText(account.username)}
+                title="Copy username"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="inline h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16h8M8 12h8m-8-4h8M4 6h16M4 10h16M4 14h16M4 18h16" /></svg>
+              </button>
+            )}
+          </div>
+          {account.website && (
+            <div className="mb-2">
+              <span className="font-semibold">Website:</span>{' '}
+              <a
+                href={account.website.startsWith('http') ? account.website : `https://${account.website}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-600 dark:text-blue-400 hover:underline"
+              >
+                {account.website}
+              </a>
+            </div>
+          )}
         </div>
         
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="space-y-2">
-            <div className="flex items-center">
-              <span className="text-gray-700 dark:text-gray-300 mr-2">Username:</span>
-              <span className="font-medium">{account.username}</span>
-              <Button
-                variant="ghost"
-                size="xs"
-                className="ml-2"
-                onClick={() => copyToClipboard(account.username)}
-                aria-label="Copy username"
-              >
-                <Copy size={14} />
-              </Button>
-            </div>
-            
             {account.website && (
               <div className="flex items-center">
                 <span className="text-gray-700 dark:text-gray-300 mr-2">Website:</span>

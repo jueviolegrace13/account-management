@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import { Workspace, Account, Note, Reminder, WorkspaceMember } from '../types';
+import { Workspace, Account, Note, Reminder } from '../types';
 
 // Workspace operations
 export const createWorkspace = async (name: string) => {
@@ -187,6 +187,20 @@ export const deleteAccount = async (id: string) => {
   if (error) throw error;
 };
 
+export const getAccountById = async (accountId: string) => {
+  const { data, error } = await supabase
+    .from('accounts')
+    .select(`
+      *,
+      notes (*),
+      reminders (*)
+    `)
+    .eq('id', accountId)
+    .single();
+  if (error) throw error;
+  return data as Account;
+};
+
 // Note operations
 export const createNote = async (note: Omit<Note, 'id' | 'created_at'>) => {
   const { data, error } = await supabase
@@ -272,12 +286,16 @@ export const getUpcomingReminders = async (userId: string) => {
 };
 
 // User profile operations
-export const createUserProfile = async (user: any) => {
+export const createUserProfile = async (user: unknown) => {
+  if (!user || typeof user !== 'object' || !('id' in user) || !('email' in user)) {
+    throw new Error('Invalid user object');
+  }
+  const typedUser = user as { id: string; email: string };
   const { data, error } = await supabase
     .from('users')
     .insert([{
-      id: user.id,
-      email: user.email
+      id: typedUser.id,
+      email: typedUser.email
     }])
     .select()
     .single();
