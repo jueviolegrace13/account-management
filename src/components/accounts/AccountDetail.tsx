@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ExternalLink, Copy, Edit, Clock, Users, ArrowLeft, Plus, MessageSquare } from 'lucide-react';
 import Button from '../ui/Button';
 import Badge from '../ui/Badge';
@@ -8,6 +8,8 @@ import { Account, Note, Reminder } from '../../types';
 import { formatDateTime, getDomainFromUrl } from '../../utils/helpers';
 import Input from '../ui/Input';
 import TextArea from '../ui/TextArea';
+import CryptoJS from 'crypto-js';
+import { getVaultEntries, addVaultEntry } from '../../lib/database';
 
 interface AccountDetailProps {
   account: Account;
@@ -32,6 +34,9 @@ const AccountDetail: React.FC<AccountDetailProps> = ({
   const [vaultKey, setVaultKey] = useState('');
   const [vaultValue, setVaultValue] = useState('');
   const [showDecrypted, setShowDecrypted] = useState(false);
+  const [vaultLoading, setVaultLoading] = useState(false);
+
+  const ENCRYPTION_SECRET = import.meta.env.VITE_VAULT_ENCRYPTION_SECRET || '';
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -49,15 +54,54 @@ const AccountDetail: React.FC<AccountDetailProps> = ({
     onAccountUpdate();
   };
 
-  const encrypt = (val: string) => '*'.repeat(val.length);
-  const decrypt = (val: string) => val;
+  const encrypt = (val: string) => {
+    if (!ENCRYPTION_SECRET) return val;
+    return CryptoJS.AES.encrypt(val, ENCRYPTION_SECRET).toString();
+  };
+  const decrypt = (val: string) => {
+    if (!ENCRYPTION_SECRET) return val;
+    try {
+      const bytes = CryptoJS.AES.decrypt(val, ENCRYPTION_SECRET);
+      return bytes.toString(CryptoJS.enc.Utf8);
+    } catch {
+      return '';
+    }
+  };
 
-  const handleAddVaultEntry = () => {
+  const fetchVault = async () => {
+    setVaultLoading(true);
+    try {
+      const data = await getVaultEntries(account.id);
+      setVault(data || []);
+    } catch (err) {
+      // handle error (optional)
+    } finally {
+      setVaultLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'vault') {
+      fetchVault();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, account.id]);
+
+  const handleAddVaultEntry = async () => {
     if (!vaultKey || !vaultValue) return;
-    setVault([...vault, { key: vaultKey, value: vaultValue }]);
-    setVaultKey('');
-    setVaultValue('');
-    setShowVaultModal(false);
+    setVaultLoading(true);
+    try {
+      const encryptedValue = encrypt(vaultValue);
+      await addVaultEntry(account.id, vaultKey, encryptedValue);
+      setVaultKey('');
+      setVaultValue('');
+      setShowVaultModal(false);
+      fetchVault();
+    } catch (err) {
+      // handle error (optional)
+    } finally {
+      setVaultLoading(false);
+    }
   };
 
   const renderNotes = () => {
@@ -274,32 +318,36 @@ const AccountDetail: React.FC<AccountDetailProps> = ({
           </Button>
         </div>
       </div>
-      <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-          <thead>
-            <tr>
-              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Key</th>
-              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Value</th>
-            </tr>
-          </thead>
-          <tbody>
-            {vault.length === 0 ? (
+      {vaultLoading ? (
+        <div className="p-6 text-center text-gray-500 dark:text-gray-400">Loading...</div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <thead>
               <tr>
-                <td colSpan={2} className="px-4 py-6 text-center text-gray-500 dark:text-gray-400">No vault entries yet.</td>
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Key</th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Value</th>
               </tr>
-            ) : (
-              vault.map((entry, idx) => (
-                <tr key={idx} className="border-b border-gray-200 dark:border-gray-700">
-                  <td className="px-4 py-2 font-mono text-sm">{entry.key}</td>
-                  <td className="px-4 py-2 font-mono text-sm">
-                    {showDecrypted ? decrypt(entry.value) : encrypt(entry.value)}
-                  </td>
+            </thead>
+            <tbody>
+              {vault.length === 0 ? (
+                <tr>
+                  <td colSpan={2} className="px-4 py-6 text-center text-gray-500 dark:text-gray-400">No vault entries yet.</td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+              ) : (
+                vault.map((entry, idx) => (
+                  <tr key={idx} className="border-b border-gray-200 dark:border-gray-700">
+                    <td className="px-4 py-2 font-mono text-sm">{entry.key}</td>
+                    <td className="px-4 py-2 font-mono text-sm">
+                      {showDecrypted ? decrypt(entry.value) : '********'}
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
       {showVaultModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
           <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg w-full max-w-md p-6 relative">
@@ -323,7 +371,7 @@ const AccountDetail: React.FC<AccountDetailProps> = ({
             />
             <div className="flex justify-end gap-2 mt-6">
               <Button variant="outline" onClick={() => setShowVaultModal(false)}>Cancel</Button>
-              <Button variant="primary" onClick={handleAddVaultEntry}>Save</Button>
+              <Button variant="primary" onClick={handleAddVaultEntry} isLoading={vaultLoading}>Save</Button>
             </div>
           </div>
         </div>

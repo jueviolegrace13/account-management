@@ -227,10 +227,6 @@ export const createReminder = async (reminder: Omit<Reminder, 'id' | 'created_at
   const { data, error } = await supabase
     .from('reminders')
     .insert([reminder])
-    .select(`
-      *,
-      author:users!reminders_author_id_fkey (email)
-    `)
     .single();
 
   if (error) throw error;
@@ -242,10 +238,6 @@ export const updateReminder = async (id: string, updates: Partial<Reminder>) => 
     .from('reminders')
     .update(updates)
     .eq('id', id)
-    .select(`
-      *,
-      author:users!reminders_author_id_fkey (email)
-    `)
     .single();
 
   if (error) throw error;
@@ -361,6 +353,26 @@ export const getPendingInvitations = async (email: string) => {
     .eq('status', 'pending')
     .gt('expires_at', new Date().toISOString());
 
+  if (error) throw error;
+  return data;
+};
+
+// Vault operations
+export const getVaultEntries = async (accountId: string) => {
+  const { data, error } = await supabase
+    .from('vault')
+    .select('*')
+    .eq('account_id', accountId)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return data;
+};
+
+export const addVaultEntry = async (accountId: string, key: string, value: string) => {
+  const { data, error } = await supabase
+    .from('vault')
+    .insert([{ account_id: accountId, key, value }])
+    .single();
   if (error) throw error;
   return data;
 };
