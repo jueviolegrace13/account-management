@@ -23,6 +23,7 @@ const WorkspaceDashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
 
   useEffect(() => {
     loadInitialData();
@@ -33,6 +34,14 @@ const WorkspaceDashboard: React.FC = () => {
       loadWorkspaceAccounts();
     }
   }, [selectedWorkspace]);
+
+  useEffect(() => {
+    const fetchWorkspaces = async () => {
+      const ws = await getWorkspaces();
+      setWorkspaces(ws);
+    };
+    fetchWorkspaces();
+  }, []);
 
   const loadInitialData = async () => {
     try {
@@ -56,6 +65,14 @@ const WorkspaceDashboard: React.FC = () => {
     try {
       const data = await getWorkspaceAccounts(selectedWorkspace.id);
       setAccounts(data);
+      
+      // Update viewingAccount if it exists
+      if (viewingAccount) {
+        const updatedAccount = data.find(acc => acc.id === viewingAccount.id);
+        if (updatedAccount) {
+          setViewingAccount(updatedAccount);
+        }
+      }
     } catch (err: any) {
       setError(err.message);
     }
@@ -131,21 +148,39 @@ const WorkspaceDashboard: React.FC = () => {
   }
 
   if (!selectedWorkspace) {
+    if (workspaces.length === 0) {
+      return (
+        <div className="p-6">
+          <div className="text-center py-12">
+            <h2 className="text-xl font-semibold mb-4">No Workspaces Found</h2>
+            <p className="text-gray-600 dark:text-gray-300 mb-6">
+              You need to create or be invited to a workspace to get started.
+            </p>
+            <button
+              onClick={() => setShowWorkspaceForm(true)}
+              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Create Your First Workspace
+            </button>
+          </div>
+          {showWorkspaceForm && (
+            <WorkspaceForm
+              onSave={handleCreateWorkspace}
+              onCancel={() => setShowWorkspaceForm(false)}
+            />
+          )}
+        </div>
+      );
+    }
+
     return (
       <div className="p-6">
-        <div className="text-center py-12">
-          <h2 className="text-xl font-semibold mb-4">No Workspaces Found</h2>
-          <p className="text-gray-600 dark:text-gray-300 mb-6">
-            You need to create or be invited to a workspace to get started.
-          </p>
-          <button
-            onClick={() => setShowWorkspaceForm(true)}
-            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            Create Your First Workspace
-          </button>
-        </div>
-        
+        <WorkspaceSelector
+          selectedWorkspace={selectedWorkspace}
+          onWorkspaceSelect={setSelectedWorkspace}
+          onCreateWorkspace={() => setShowWorkspaceForm(true)}
+          workspaces={workspaces}
+        />
         {showWorkspaceForm && (
           <WorkspaceForm
             onSave={handleCreateWorkspace}

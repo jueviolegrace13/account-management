@@ -4,6 +4,7 @@ import MainLayout from './components/layout/MainLayout';
 import Landing from './pages/Landing';
 import { getUserSettings } from './utils/storage';
 import { supabase } from './lib/supabase';
+import InvitationPage from './pages/InvitationPage';
 
 function App() {
   // Initialize theme from stored settings
@@ -28,6 +29,7 @@ function App() {
             </PrivateRoute>
           }
         />
+        <Route path="/invitations/:invitationId" element={<InvitationPage />} />
       </Routes>
     </Router>
   );

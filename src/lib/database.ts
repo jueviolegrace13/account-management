@@ -20,14 +20,15 @@ export const getWorkspaces = async () => {
       *,
       workspace_members (
         *,
-        user:users!workspace_members_user_id_fkey (email)
+        user_id
       )
     `)
     .order('created_at', { ascending: false });
 
   if (error) throw error;
-  return data as Workspace[];
+  return data as unknown as Workspace[];
 };
+
 
 export const updateWorkspace = async (id: string, updates: Partial<Workspace>) => {
   const { data, error } = await supabase
@@ -54,7 +55,7 @@ export const deleteWorkspace = async (id: string) => {
 export const inviteWorkspaceMember = async (workspaceId: string, email: string, role: 'owner' | 'assistant') => {
   // First, check if user exists
   const { data: userData, error: userError } = await supabase
-    .from('users')
+    .from('auth.users')
     .select('id')
     .eq('email', email)
     .single();
@@ -102,18 +103,20 @@ export const getWorkspaceAccounts = async (workspaceId: string) => {
     .from('accounts')
     .select(`
       *,
-      notes (*,
-        author:users!notes_author_id_fkey (email)
+      notes (
+        *,
+        author_id
       ),
-      reminders (*,
-        author:users!reminders_author_id_fkey (email)
+      reminders (
+        *,
+        author_id
       )
     `)
     .eq('workspace_id', workspaceId)
     .order('created_at', { ascending: false });
 
   if (error) throw error;
-  return data as Account[];
+  return data as unknown as Account[];
 };
 
 export const getAssignedAccounts = async (userId: string) => {
@@ -162,10 +165,6 @@ export const createNote = async (note: Omit<Note, 'id' | 'created_at'>) => {
   const { data, error } = await supabase
     .from('notes')
     .insert([note])
-    .select(`
-      *,
-      author:users!notes_author_id_fkey (email)
-    `)
     .single();
 
   if (error) throw error;
@@ -179,7 +178,7 @@ export const updateNote = async (id: string, updates: Partial<Note>) => {
     .eq('id', id)
     .select(`
       *,
-      author:users!notes_author_id_fkey (email)
+      author:auth.users(email)
     `)
     .single();
 
@@ -276,6 +275,64 @@ export const getUserProfile = async (userId: string) => {
     .select('*')
     .eq('id', userId)
     .single();
+
+  if (error) throw error;
+  return data;
+};
+
+// Workspace invitation operations
+export const createWorkspaceInvitation = async (
+  workspaceId: string,
+  email: string,
+  role: 'owner' | 'assistant'
+) => {
+  const { data: invitation, error } = await supabase
+    .from('workspace_invitations')
+    .insert([{
+      workspace_id: workspaceId,
+      email,
+      role,
+      invited_by: (await supabase.auth.getUser()).data.user?.id
+    }])
+    .select()
+    .single();
+
+  if (error) throw error;
+  return invitation;
+};
+
+export const acceptWorkspaceInvitation = async (invitationId: string) => {
+  const { data: invitation, error: invitationError } = await supabase
+    .from('workspace_invitations')
+    .select('*')
+    .eq('id', invitationId)
+    .single();
+
+  if (invitationError) throw invitationError;
+  if (invitation.status !== 'pending') throw new Error('Invitation is no longer valid');
+  if (new Date(invitation.expires_at) < new Date()) throw new Error('Invitation has expired');
+
+  // Start a transaction
+  const { error: transactionError } = await supabase.rpc('accept_workspace_invitation', {
+    invitation_id: invitationId
+  });
+
+  if (transactionError) throw transactionError;
+};
+
+export const getPendingInvitations = async (email: string) => {
+  const { data, error } = await supabase
+    .from('workspace_invitations')
+    .select(`
+      *,
+      workspaces (
+        id,
+        name
+      )
+    `)
+    .eq('email', email)
+    .eq('status', 'pending')
+    .gt('expires_at', new Date().toISOString());
 
   if (error) throw error;
   return data;

@@ -48,37 +48,72 @@
     - Add policies for authenticated users to manage their own data
 */
 
--- Create tables
-CREATE TABLE public.users (
-  id uuid PRIMARY KEY REFERENCES auth.users,
-  email text UNIQUE NOT NULL,
+-- 1. Drop policies that depend on these tables (add more as needed)
+DROP POLICY IF EXISTS "Users can view accounts in their workspaces" ON accounts;
+DROP POLICY IF EXISTS "Workspace owners can manage accounts" ON accounts;
+DROP POLICY IF EXISTS "Users can view notes for accounts they have access to" ON notes;
+DROP POLICY IF EXISTS "Users can manage notes for accounts they have access to" ON notes;
+DROP POLICY IF EXISTS "Users can view reminders for accounts they have access to" ON reminders;
+DROP POLICY IF EXISTS "Users can manage reminders for accounts they have access to" ON reminders;
+
+-- 2. Drop tables in dependency order
+DROP TABLE IF EXISTS reminders;
+DROP TABLE IF EXISTS notes;
+DROP TABLE IF EXISTS accounts;
+DROP TABLE IF EXISTS workspace_members;
+DROP TABLE IF EXISTS workspaces;
+DROP TABLE IF EXISTS public.users;
+
+-- 3. Recreate tables with correct relationships
+
+-- Workspaces
+CREATE TABLE workspaces (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  name text NOT NULL,
+  owner_id uuid REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
   created_at timestamptz DEFAULT now(),
   updated_at timestamptz DEFAULT now()
 );
 
-CREATE TABLE public.accounts (
+-- Workspace Members
+CREATE TABLE workspace_members (
+  workspace_id uuid REFERENCES workspaces(id) ON DELETE CASCADE,
+  user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE,
+  role text CHECK (role IN ('owner', 'admin', 'member')) NOT NULL DEFAULT 'member',
+  created_at timestamptz DEFAULT now(),
+  PRIMARY KEY (workspace_id, user_id)
+);
+
+-- Accounts
+CREATE TABLE accounts (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
+  user_id uuid REFERENCES auth.users(id) ON DELETE SET NULL,
+  workspace_id uuid REFERENCES workspaces(id) ON DELETE CASCADE,
   name text NOT NULL,
   username text NOT NULL,
   website text,
   created_at timestamptz DEFAULT now(),
-  updated_at timestamptz DEFAULT now()
+  updated_at timestamptz DEFAULT now(),
+  assigned_to uuid[] -- If you want to support multiple assignees, otherwise remove
 );
 
-CREATE TABLE public.notes (
+-- Notes
+CREATE TABLE notes (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  account_id uuid REFERENCES public.accounts(id) ON DELETE CASCADE NOT NULL,
+  account_id uuid REFERENCES accounts(id) ON DELETE CASCADE,
+  author_id uuid REFERENCES auth.users(id) ON DELETE SET NULL,
   title text NOT NULL,
   content text NOT NULL,
   type text CHECK (type IN ('regular', 'report')) NOT NULL,
   created_at timestamptz DEFAULT now()
 );
 
-CREATE TABLE public.reminders (
+-- Reminders
+CREATE TABLE reminders (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
-  account_id uuid REFERENCES public.accounts(id) ON DELETE SET NULL,
+  user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE,
+  account_id uuid REFERENCES accounts(id) ON DELETE SET NULL,
+  author_id uuid REFERENCES auth.users(id) ON DELETE SET NULL,
   title text NOT NULL,
   content text NOT NULL,
   date timestamptz NOT NULL,
@@ -86,97 +121,27 @@ CREATE TABLE public.reminders (
   created_at timestamptz DEFAULT now()
 );
 
-CREATE TABLE public.assistants (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
-  name text NOT NULL,
-  email text NOT NULL,
-  phone text,
-  created_at timestamptz DEFAULT now()
-);
+-- 4. (Re)add your RLS policies and triggers as needed
 
-CREATE TABLE public.account_assistants (
-  account_id uuid REFERENCES public.accounts(id) ON DELETE CASCADE,
-  assistant_id uuid REFERENCES public.assistants(id) ON DELETE CASCADE,
-  PRIMARY KEY (account_id, assistant_id)
-);
+-- Example: Enable RLS
+ALTER TABLE workspaces ENABLE ROW LEVEL SECURITY;
+ALTER TABLE workspace_members ENABLE ROW LEVEL SECURITY;
+ALTER TABLE accounts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE notes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE reminders ENABLE ROW LEVEL SECURITY;
 
--- Enable Row Level Security
-ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.accounts ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.notes ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.reminders ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.assistants ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.account_assistants ENABLE ROW LEVEL SECURITY;
+-- Example: Add updated_at trigger for workspaces and accounts
+DROP TRIGGER IF EXISTS update_workspaces_updated_at ON workspaces;
+DROP TRIGGER IF EXISTS update_accounts_updated_at ON accounts;
 
--- Create policies
-CREATE POLICY "Users can manage their own data"
-  ON public.users
-  FOR ALL
-  USING (auth.uid() = id)
-  WITH CHECK (auth.uid() = id);
-
-CREATE POLICY "Users can manage their own accounts"
-  ON public.accounts
-  FOR ALL
-  USING (auth.uid() = user_id)
-  WITH CHECK (auth.uid() = user_id);
-
-CREATE POLICY "Users can manage notes for their accounts"
-  ON public.notes
-  FOR ALL
-  USING (EXISTS (
-    SELECT 1 FROM public.accounts
-    WHERE accounts.id = notes.account_id
-    AND accounts.user_id = auth.uid()
-  ))
-  WITH CHECK (EXISTS (
-    SELECT 1 FROM public.accounts
-    WHERE accounts.id = notes.account_id
-    AND accounts.user_id = auth.uid()
-  ));
-
-CREATE POLICY "Users can manage their own reminders"
-  ON public.reminders
-  FOR ALL
-  USING (auth.uid() = user_id)
-  WITH CHECK (auth.uid() = user_id);
-
-CREATE POLICY "Users can manage their own assistants"
-  ON public.assistants
-  FOR ALL
-  USING (auth.uid() = user_id)
-  WITH CHECK (auth.uid() = user_id);
-
-CREATE POLICY "Users can manage assistant assignments for their accounts"
-  ON public.account_assistants
-  FOR ALL
-  USING (EXISTS (
-    SELECT 1 FROM public.accounts
-    WHERE accounts.id = account_assistants.account_id
-    AND accounts.user_id = auth.uid()
-  ))
-  WITH CHECK (EXISTS (
-    SELECT 1 FROM public.accounts
-    WHERE accounts.id = account_assistants.account_id
-    AND accounts.user_id = auth.uid()
-  ));
-
--- Create trigger to update updated_at
-CREATE OR REPLACE FUNCTION update_updated_at()
-RETURNS TRIGGER AS $$
-BEGIN
-  NEW.updated_at = now();
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER update_users_updated_at
-  BEFORE UPDATE ON public.users
+CREATE TRIGGER update_workspaces_updated_at
+  BEFORE UPDATE ON workspaces
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at();
 
 CREATE TRIGGER update_accounts_updated_at
-  BEFORE UPDATE ON public.accounts
+  BEFORE UPDATE ON accounts
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at();
+
+-- (Re)add your policies here as needed

@@ -4,7 +4,14 @@ import Button from '../ui/Button';
 import Input from '../ui/Input';
 import { Workspace, WorkspaceRole } from '../../types';
 import { formatDate } from '../../utils/helpers';
-import { inviteWorkspaceMember, removeWorkspaceMember } from '../../lib/database';
+import { removeWorkspaceMember, createWorkspaceInvitation } from '../../lib/database';
+import { sendWorkspaceInvitation } from '../../lib/email';
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(
+  import.meta.env.VITE_SUPABASE_URL,
+  import.meta.env.VITE_SUPABASE_ANON_KEY
+);
 
 interface WorkspaceMembersProps {
   workspace: Workspace;
@@ -36,11 +43,21 @@ const WorkspaceMembers: React.FC<WorkspaceMembersProps> = ({
     setError('');
     
     try {
-      await inviteWorkspaceMember(workspace.id, email, role);
+      // Create invitation in database
+      const invitation = await createWorkspaceInvitation(workspace.id, email, role);
+      
+      // Send invitation email
+      await sendWorkspaceInvitation(email, {
+        workspaceName: workspace.name,
+        inviterEmail: (await supabase.auth.getUser()).data.user?.email || 'A workspace member',
+        role,
+        invitationLink: `${window.location.origin}/invitations/${invitation.id}`
+      });
+
       setEmail('');
       onInviteMember(email, role);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setLoading(false);
     }
@@ -51,8 +68,8 @@ const WorkspaceMembers: React.FC<WorkspaceMembersProps> = ({
       try {
         await removeWorkspaceMember(workspace.id, userId);
         onRemoveMember(userId);
-      } catch (err: any) {
-        setError(err.message);
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : 'An error occurred');
       }
     }
   };
@@ -97,6 +114,7 @@ const WorkspaceMembers: React.FC<WorkspaceMembersProps> = ({
                 value={role}
                 onChange={(e) => setRole(e.target.value as WorkspaceRole)}
                 className="w-full px-4 py-2 rounded-md border border-gray-300 dark:border-gray-600 focus:ring-blue-500 focus:outline-none focus:ring-2 focus:border-transparent bg-white dark:bg-gray-800"
+                aria-label="Select member role"
               >
                 <option value="assistant">Assistant</option>
                 <option value="owner">Owner</option>

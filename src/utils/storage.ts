@@ -54,3 +54,21 @@ export const toggleSidebar = (): UserSettings => {
   saveUserSettings(updatedSettings);
   return updatedSettings;
 };
+
+// Account storage
+const ACCOUNTS_KEY = 'accounts';
+
+export const getAccounts = () => getItem(ACCOUNTS_KEY, []);
+export const saveAccounts = (accounts: any[]) => setItem(ACCOUNTS_KEY, accounts);
+
+// Reminder storage
+const REMINDERS_KEY = 'reminders';
+
+export const getReminders = () => getItem(REMINDERS_KEY, []);
+export const saveReminders = (reminders: any[]) => setItem(REMINDERS_KEY, reminders);
+
+// Assistant storage
+const ASSISTANTS_KEY = 'assistants';
+
+export const getAssistants = () => getItem(ASSISTANTS_KEY, []);
+export const saveAssistants = (assistants: any[]) => setItem(ASSISTANTS_KEY, assistants);

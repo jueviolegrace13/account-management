@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Bold, Italic, List, ListOrdered, AlignLeft, AlignCenter, AlignRight, Link } from 'lucide-react';
 import Button from './Button';
 
@@ -17,23 +17,27 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
   error,
   placeholder = 'Start typing...',
 }) => {
-  const [editorHtml, setEditorHtml] = useState(initialValue);
+  const editorRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    setEditorHtml(initialValue);
+    if (editorRef.current && initialValue !== editorRef.current.innerHTML) {
+      editorRef.current.innerHTML = initialValue;
+    }
   }, [initialValue]);
 
   const execCommand = (command: string, value: string | boolean = false) => {
     document.execCommand(command, false, value ? String(value) : '');
-    const updatedContent = document.getElementById('rich-text-editor')?.innerHTML || '';
-    setEditorHtml(updatedContent);
-    onChange(updatedContent);
+    if (editorRef.current) {
+      const updatedContent = editorRef.current.innerHTML;
+      onChange(updatedContent);
+    }
   };
 
-  const handleKeyUp = () => {
-    const content = document.getElementById('rich-text-editor')?.innerHTML || '';
-    setEditorHtml(content);
-    onChange(content);
+  const handleInput = () => {
+    if (editorRef.current) {
+      const content = editorRef.current.innerHTML;
+      onChange(content);
+    }
   };
 
   const insertLink = () => {
@@ -126,23 +130,24 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
           </Button>
         </div>
         <div
-          id="rich-text-editor"
+          ref={editorRef}
           className="p-4 min-h-[150px] focus:outline-none bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
           contentEditable
-          dangerouslySetInnerHTML={{ __html: editorHtml }}
-          onKeyUp={handleKeyUp}
+          onInput={handleInput}
           data-placeholder={placeholder}
         />
       </div>
       {error && <p className="mt-1 text-sm text-red-600 dark:text-red-500">{error}</p>}
 
-      <style jsx>{`
-        [contentEditable=true]:empty:before {
-          content: attr(data-placeholder);
-          color: #9ca3af;
-          pointer-events: none;
-        }
-      `}</style>
+      <style>
+        {`
+          [contentEditable=true]:empty:before {
+            content: attr(data-placeholder);
+            color: #9ca3af;
+            pointer-events: none;
+          }
+        `}
+      </style>
     </div>
   );
 };

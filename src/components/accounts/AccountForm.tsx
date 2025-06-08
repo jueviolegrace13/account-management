@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Save, X } from 'lucide-react';
 import Button from '../ui/Button';
 import Input from '../ui/Input';
-import { Account, Workspace, WorkspaceMember } from '../../types';
-import { createAccount, updateAccount, getWorkspaces } from '../../lib/database';
+import { Account, Workspace } from '../../types';
+import { createAccount, updateAccount } from '../../lib/database';
+import { supabase } from '../../lib/supabase';
 
 interface AccountFormProps {
   account?: Account;
@@ -39,6 +40,9 @@ const AccountForm: React.FC<AccountFormProps> = ({
     setError('');
     
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
       if (account) {
         await updateAccount(account.id, {
           name,
@@ -48,7 +52,7 @@ const AccountForm: React.FC<AccountFormProps> = ({
         });
       } else {
         await createAccount({
-          user_id: workspace.owner_id,
+          user_id: user.id,
           workspace_id: workspace.id,
           name,
           username,
@@ -58,8 +62,8 @@ const AccountForm: React.FC<AccountFormProps> = ({
       }
       
       onSave();
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setLoading(false);
     }
