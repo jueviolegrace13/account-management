@@ -7,6 +7,7 @@ const USER_SETTINGS_KEY = 'user_settings';
 const defaultUserSettings: UserSettings = {
   theme: 'light',
   sidebarCollapsed: false,
+  timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
 };
 
 // Helper functions for localStorage
@@ -29,10 +30,18 @@ const setItem = <T>(key: string, value: T): void => {
 };
 
 // User settings storage
-export const getUserSettings = (): UserSettings => getItem<UserSettings>(USER_SETTINGS_KEY, defaultUserSettings);
+export const getUserSettings = (): UserSettings => {
+  return getItem<UserSettings>(USER_SETTINGS_KEY, defaultUserSettings);
+};
 
 export const saveUserSettings = (settings: UserSettings): void => {
   setItem(USER_SETTINGS_KEY, settings);
+  // Apply theme immediately when settings are saved
+  if (settings.theme === 'dark') {
+    document.documentElement.classList.add('dark');
+  } else {
+    document.documentElement.classList.remove('dark');
+  }
 };
 
 export const toggleTheme = (): UserSettings => {

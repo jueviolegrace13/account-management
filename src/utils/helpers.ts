@@ -80,3 +80,13 @@ export const createDateString = (): string => {
 export const generateId = (): string => {
   return 'id-' + Math.random().toString(36).substr(2, 9) + '-' + Date.now();
 }
+
+// Get list of supported timezones
+export const getTimeZones = (): string[] => {
+  try {
+    // @ts-expect-error - Intl.supportedValuesOf is supported in modern browsers but TypeScript types are not up to date
+    return Intl.supportedValuesOf('timeZone');
+  } catch {
+    return ['UTC']; // Fallback to UTC if timezone list cannot be retrieved
+  }
+};

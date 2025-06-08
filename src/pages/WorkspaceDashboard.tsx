@@ -24,7 +24,6 @@ const WorkspaceDashboard: React.FC = () => {
   const [showAccountForm, setShowAccountForm] = useState(false);
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
   const [viewingAccount, setViewingAccount] = useState<Account | null>(null);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const navigate = useNavigate();
   const location = useLocation();
@@ -32,13 +31,8 @@ const WorkspaceDashboard: React.FC = () => {
   // Set initial workspace when workspaces are loaded
   useEffect(() => {
     if (workspaces && workspaces.length > 0) {
-      const storedId = localStorage.getItem(SELECTED_WORKSPACE_KEY);
-      if (storedId) {
-        const found = workspaces.find(ws => ws.id === storedId);
-        setSelectedWorkspace(found || workspaces[0]);
-      } else {
-        setSelectedWorkspace(workspaces[0]);
-      }
+      setSelectedWorkspace(workspaces[0]);
+      localStorage.setItem(SELECTED_WORKSPACE_KEY, workspaces[0].id);
     } else {
       setSelectedWorkspace(null);
     }
@@ -50,7 +44,6 @@ const WorkspaceDashboard: React.FC = () => {
       loadWorkspaceAccounts();
     } else {
       setAccounts([]);
-      setLoading(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedWorkspace]);
@@ -62,7 +55,6 @@ const WorkspaceDashboard: React.FC = () => {
 
   const loadWorkspaceAccounts = async () => {
     if (!selectedWorkspace) return;
-    setLoading(true);
     try {
       const data = await getWorkspaceAccounts(selectedWorkspace.id);
       setAccounts(data);
@@ -75,8 +67,6 @@ const WorkspaceDashboard: React.FC = () => {
       }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'An error occurred');
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -129,13 +119,28 @@ const WorkspaceDashboard: React.FC = () => {
   const totalNotes = accounts.reduce((sum, account) => sum + (account.notes?.length || 0), 0);
   const totalReminders = accounts.reduce((sum, account) => sum + (account.reminders?.length || 0), 0);
 
-  if (workspacesLoading || loading) {
+  if (workspacesLoading) {
+    // Show loading spinner
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
           <p className="mt-4 text-gray-600">Loading...</p>
         </div>
+      </div>
+    );
+  }
+
+  if (!workspacesLoading && workspaces.length === 0) {
+    // No workspaces: show the create workspace form
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <WorkspaceForm
+          onSave={async () => {
+            await reloadWorkspaces();
+          }}
+          onCancel={() => {}}
+        />
       </div>
     );
   }

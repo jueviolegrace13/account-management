@@ -1,7 +1,6 @@
 import React from 'react';
-import { Menu, Moon, Sun, User, LogOut } from 'lucide-react';
+import { Menu, User, LogOut } from 'lucide-react';
 import Button from '../ui/Button';
-import { getUserSettings, toggleTheme } from '../../utils/storage';
 import { supabase } from '../../lib/supabase';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
@@ -17,7 +16,6 @@ interface HeaderProps {
 const SELECTED_WORKSPACE_KEY = 'selectedWorkspaceId';
 
 const Header: React.FC<HeaderProps> = ({ toggleSidebar, sidebarOpen }) => {
-  const [theme, setTheme] = React.useState<'light' | 'dark'>(getUserSettings().theme);
   const { user } = useAuth();
   const navigate = useNavigate();
   const { workspaces } = useWorkspaces();
@@ -37,16 +35,6 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar, sidebarOpen }) => {
       }
     }
   }, [workspaces]);
-
-  const handleToggleTheme = () => {
-    const newSettings = toggleTheme();
-    setTheme(newSettings.theme);
-    if (newSettings.theme === 'dark') {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  };
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -87,14 +75,7 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar, sidebarOpen }) => {
               onCreateWorkspace={() => {}}
             />
           </div>
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={handleToggleTheme}
-            aria-label={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
-          >
-            {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
-          </Button>
+          {/* Theme toggle button hidden */}
           {user && (
             <div className="flex items-center space-x-2">
               <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center">

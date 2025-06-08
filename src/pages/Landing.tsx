@@ -14,7 +14,7 @@ const Landing: React.FC = () => {
           <div className="flex-1 text-center lg:text-left">
             <div className="flex items-center justify-center lg:justify-start mb-6">
               <Key size={32} className="text-blue-600 dark:text-blue-400" />
-              <h1 className="text-3xl font-bold ml-2">AccountHub</h1>
+              <h1 className="text-3xl font-bold ml-2 text-gray-900 dark:text-white">AccountHub</h1>
             </div>
             <h2 className="text-4xl lg:text-5xl font-bold text-gray-900 dark:text-white mb-6">
               Manage All Your Accounts in One Place
@@ -47,19 +47,19 @@ const Landing: React.FC = () => {
         {/* Features */}
         <div className="grid md:grid-cols-3 gap-8 mt-24">
           <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
-            <h3 className="text-xl font-semibold mb-4">Account Management</h3>
+            <h3 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Account Management</h3>
             <p className="text-gray-600 dark:text-gray-300">
               Store and organize all your account credentials securely in one place.
             </p>
           </div>
           <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
-            <h3 className="text-xl font-semibold mb-4">Smart Reminders</h3>
+            <h3 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Smart Reminders</h3>
             <p className="text-gray-600 dark:text-gray-300">
               Never miss important dates with our intelligent reminder system.
             </p>
           </div>
           <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
-            <h3 className="text-xl font-semibold mb-4">Team Collaboration</h3>
+            <h3 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Team Collaboration</h3>
             <p className="text-gray-600 dark:text-gray-300">
               Assign accounts to assistants and manage permissions efficiently.
             </p>
