@@ -32,7 +32,7 @@ const Settings: React.FC = () => {
   
   const handleExportData = () => {
     const data = {
-      accounts: getAccounts(),
+      accounts: [],
       reminders: getReminders(),
       assistants: getAssistants(),
       settings: getUserSettings(),
