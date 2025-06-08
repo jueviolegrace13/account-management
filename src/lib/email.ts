@@ -16,19 +16,32 @@ export const sendWorkspaceInvitation = async (
 	toEmail: string,
 	data: InvitationEmailData
 ) => {
-	const { error } = await supabase.functions.invoke('send-email', {
-		body: {
-			to: toEmail,
-			subject: `You've been invited to join ${data.workspaceName}`,
-			template: 'workspace-invitation',
-			data: {
-				workspaceName: data.workspaceName,
-				inviterEmail: data.inviterEmail,
-				role: data.role,
-				invitationLink: data.invitationLink,
+	try {
+		const { data: response, error } = await supabase.functions.invoke('send-email', {
+			body: {
+				to: toEmail,
+				subject: `You've been invited to join ${data.workspaceName}`,
+				template: 'workspace-invitation',
+				data: {
+					workspaceName: data.workspaceName,
+					inviterEmail: data.inviterEmail,
+					role: data.role,
+					invitationLink: data.invitationLink,
+				},
 			},
-		},
-	});
+		});
 
-	if (error) throw error;
+		if (error) {
+			throw new Error(error.message);
+		}
+
+		if (!response.success) {
+			throw new Error(response.error || 'Failed to send invitation email');
+		}
+
+		return response;
+	} catch (error) {
+		console.error('Error sending invitation email:', error);
+		throw error;
+	}
 }; 
