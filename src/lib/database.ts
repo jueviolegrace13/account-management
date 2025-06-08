@@ -14,42 +14,43 @@ export const createWorkspace = async (name: string) => {
 };
 
 export const getWorkspaces = async () => {
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+
+  if (authError) throw authError;
   if (!user) throw new Error('User not authenticated');
 
-  // 1. Workspaces where user is owner
+  const userId = user.id;
+
+  // 1. Workspaces owned by user
   const { data: owned, error: ownedError } = await supabase
     .from('workspaces')
     .select(`
       *,
-      workspace_members (
-        *,
-        user_id
-      )
+      workspace_members (*)
     `)
-    .eq('owner_id', user.id);
+    .eq('owner_id', userId);
 
   if (ownedError) throw ownedError;
 
-  // 2. Workspaces where user is a member
+  // 2. Workspaces where user is a member (using the join table)
   const { data: member, error: memberError } = await supabase
     .from('workspaces')
     .select(`
       *,
-      workspace_members (
-        *,
-        user_id
-      )
+      workspace_members!inner (*)
     `)
-    .filter('workspace_members.user_id', 'eq', user.id);
+    .eq('workspace_members.user_id', userId);
 
   if (memberError) throw memberError;
 
-  // 3. Merge and deduplicate
-  const all = [...(owned || []), ...(member || [])];
-  const unique = Array.from(new Map(all.map(ws => [ws.id, ws])).values());
+  // 3. Merge & deduplicate by workspace ID
+  const combined = [...(owned || []), ...(member || [])];
+  const unique = Array.from(new Map(combined.map(ws => [ws.id, ws])).values());
 
-  // Optionally, sort by created_at descending
+  // 4. Optional: sort by creation date descending
   unique.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
   return unique as Workspace[];
