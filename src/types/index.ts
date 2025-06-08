@@ -12,6 +12,7 @@ export interface Workspace {
   id: string;
   owner_id: string;
   name: string;
+  timezone: string;
   created_at: string;
   updated_at: string;
   workspace_members?: WorkspaceMember[];
@@ -58,6 +59,7 @@ export interface Reminder {
   id: string;
   user_id: string;
   account_id: string;
+  workspace_id: string;
   title: string;
   content: string;
   date: string;
@@ -72,4 +74,5 @@ export interface Reminder {
 export interface UserSettings {
   theme: 'light' | 'dark';
   sidebarCollapsed: boolean;
+  timezone: string;
 }

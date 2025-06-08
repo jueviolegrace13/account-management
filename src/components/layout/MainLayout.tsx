@@ -3,10 +3,16 @@ import Header from './Header';
 import Sidebar from './Sidebar';
 import { getUserSettings, toggleSidebar } from '../../utils/storage';
 import { Outlet } from 'react-router-dom';
+import ReminderAlarm from '../reminders/ReminderAlarm';
+import { useWorkspaces } from '../../contexts/WorkspaceContext';
+import { getWorkspaceAccounts } from '../../lib/database';
+import { Reminder } from '../../types';
 
 const MainLayout: React.FC = () => {
   const [activePage, setActivePage] = useState<string>('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(!getUserSettings().sidebarCollapsed);
+  const [reminders, setReminders] = useState<Reminder[]>([]);
+  const { workspaces } = useWorkspaces();
 
   // Initialize theme
   useEffect(() => {
@@ -17,6 +23,33 @@ const MainLayout: React.FC = () => {
       document.documentElement.classList.remove('dark');
     }
   }, []);
+
+  // Load reminders for all workspaces
+  useEffect(() => {
+    const loadReminders = async () => {
+      const allReminders = [];
+      for (const workspace of workspaces) {
+        try {
+          const accounts = await getWorkspaceAccounts(workspace.id);
+          for (const account of accounts) {
+            if (account.reminders) {
+              allReminders.push(...account.reminders.map(reminder => ({
+                ...reminder,
+                workspace_id: workspace.id
+              })));
+            }
+          }
+        } catch (error) {
+          console.error('Error loading reminders:', error);
+        }
+      }
+      setReminders(allReminders);
+    };
+
+    if (workspaces.length > 0) {
+      loadReminders();
+    }
+  }, [workspaces]);
 
   const handleToggleSidebar = () => {
     toggleSidebar();
@@ -42,6 +75,8 @@ const MainLayout: React.FC = () => {
           <Outlet />
         </div>
       </main>
+
+      <ReminderAlarm reminders={reminders} />
     </div>
   );
 };

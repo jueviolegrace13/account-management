@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import MainLayout from './components/layout/MainLayout';
 import Landing from './pages/Landing';
+import Settings from './pages/Settings';
 import { getUserSettings } from './utils/storage';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { WorkspaceProvider } from './contexts/WorkspaceContext';
@@ -36,6 +37,7 @@ function App() {
             >
               <Route index element={<WorkspaceDashboard />} />
               <Route path="account/:id" element={<AccountDetailPage />} />
+              <Route path="settings" element={<Settings />} />
             </Route>
             <Route path="/invitations/:invitationId" element={<InvitationPage />} />
           </Routes>
