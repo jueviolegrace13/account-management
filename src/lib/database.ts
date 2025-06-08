@@ -394,3 +394,13 @@ export const addVaultEntry = async (accountId: string, key: string, value: strin
   if (error) throw error;
   return data;
 };
+
+export const updateVaultEntry = async (id: string, key: string, value: string) => {
+  const { data, error } = await supabase
+    .from('vault')
+    .update({ key, value })
+    .eq('id', id)
+    .single();
+  if (error) throw error;
+  return data;
+};
