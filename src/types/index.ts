@@ -56,13 +56,14 @@ export interface Note {
 
 export interface Reminder {
   id: string;
+  user_id: string;
   account_id: string;
-  author_id: string;
   title: string;
   content: string;
   date: string;
   completed: boolean;
   created_at: string;
+  author_id?: string;
   author?: {
     email: string;
   };

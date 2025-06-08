@@ -4,7 +4,7 @@ import Card, { CardContent, CardFooter, CardHeader, CardTitle } from '../ui/Card
 import Badge from '../ui/Badge';
 import Button from '../ui/Button';
 import { Account } from '../../types';
-import { formatDate, getDomainFromUrl, truncateText } from '../../utils/helpers';
+import { formatDate, getDomainFromUrl } from '../../utils/helpers';
 
 interface AccountCardProps {
   account: Account;
@@ -33,7 +33,7 @@ const AccountCard: React.FC<AccountCardProps> = ({
           <CardTitle className="truncate">{name}</CardTitle>
           <div className="flex space-x-1">
             {reportCount > 0 && (
-              <Badge variant="danger\" className="flex items-center gap-1">
+              <Badge variant="danger" className="flex items-center gap-1">
                 <AlertCircle size={12} />
                 {reportCount}
               </Badge>

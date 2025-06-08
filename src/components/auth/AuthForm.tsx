@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
+import { createUserProfile } from '../../lib/database';
 import Input from '../ui/Input';
 import Button from '../ui/Button';
 
@@ -28,12 +29,18 @@ const AuthForm: React.FC = () => {
         if (error) throw error;
         navigate('/dashboard');
       } else {
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email,
           password,
         });
         
         if (error) throw error;
+        
+        // Create user profile
+        if (data.user) {
+          await createUserProfile(data.user);
+        }
+        
         navigate('/dashboard');
       }
     } catch (err: any) {

@@ -252,3 +252,31 @@ export const getUpcomingReminders = async (userId: string) => {
   if (error) throw error;
   return data;
 };
+
+// User profile operations
+export const createUserProfile = async (user: any) => {
+  const { data, error } = await supabase
+    .from('users')
+    .insert([{
+      id: user.id,
+      email: user.email
+    }])
+    .select()
+    .single();
+
+  if (error && error.code !== '23505') { // Ignore duplicate key error
+    throw error;
+  }
+  return data;
+};
+
+export const getUserProfile = async (userId: string) => {
+  const { data, error } = await supabase
+    .from('users')
+    .select('*')
+    .eq('id', userId)
+    .single();
+
+  if (error) throw error;
+  return data;
+};
