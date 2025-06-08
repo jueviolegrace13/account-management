@@ -12,8 +12,8 @@ const ReminderAlarm: React.FC<ReminderAlarmProps> = ({ reminders }) => {
   const checkIntervalRef = useRef<number>();
 
   useEffect(() => {
-    // Create audio element
-    audioRef.current = new Audio('/notification.mp3');
+    // Create audio element with online notification sound
+    audioRef.current = new Audio('https://cdn.freesound.org/previews/320/320181_5260872-lq.mp3');
     audioRef.current.volume = 0.5;
 
     // Function to check for due reminders
@@ -41,7 +41,9 @@ const ReminderAlarm: React.FC<ReminderAlarmProps> = ({ reminders }) => {
         ) {
           // Play alarm sound
           if (audioRef.current) {
-            audioRef.current.play();
+            audioRef.current.play().catch(error => {
+              console.error('Error playing notification sound:', error);
+            });
             
             // Stop after 3 seconds
             setTimeout(() => {
