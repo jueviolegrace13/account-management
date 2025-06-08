@@ -43,8 +43,8 @@ const AuthForm: React.FC = () => {
         
         navigate('/dashboard');
       }
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : String(err));
     } finally {
       setLoading(false);
     }
@@ -52,7 +52,7 @@ const AuthForm: React.FC = () => {
 
   return (
     <div className="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-md">
-      <h2 className="text-2xl font-bold mb-6">
+      <h2 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white">
         {isLogin ? 'Welcome Back' : 'Create Account'}
       </h2>
       

@@ -19,6 +19,8 @@ const Settings: React.FC = () => {
   const timezoneAnchorRef = React.useRef<HTMLDivElement>(null);
   const [savingTimezone, setSavingTimezone] = useState(false);
   const [timezoneSaved, setTimezoneSaved] = useState(false);
+  const [theme, setTheme] = useState<'light' | 'dark'>(getUserSettings().theme);
+  const [themeSaved, setThemeSaved] = useState(false);
 
   const timezones = getTimeZones();
   const filteredTimezones = timezones.filter(tz => 
@@ -160,6 +162,14 @@ const Settings: React.FC = () => {
     }
   };
 
+  const handleThemeChange = (newTheme: 'light' | 'dark') => {
+    setTheme(newTheme);
+    const settings = getUserSettings();
+    saveUserSettings({ ...settings, theme: newTheme });
+    setThemeSaved(true);
+    setTimeout(() => setThemeSaved(false), 2000);
+  };
+
   return (
     <div>
       <DashboardHeader 
@@ -168,6 +178,39 @@ const Settings: React.FC = () => {
       />
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Theme Selector */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Theme</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col space-y-4">
+              <div>
+                <h3 className="text-lg font-medium">Appearance</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Choose your preferred theme
+                </p>
+              </div>
+              <div className="flex items-center space-x-4">
+                <Button
+                  variant={theme === 'light' ? 'primary' : 'outline'}
+                  onClick={() => handleThemeChange('light')}
+                >
+                  Light
+                </Button>
+                <Button
+                  variant={theme === 'dark' ? 'primary' : 'outline'}
+                  onClick={() => handleThemeChange('dark')}
+                >
+                  Dark
+                </Button>
+                {themeSaved && (
+                  <span className="ml-3 text-green-600 dark:text-green-400 text-sm">Saved!</span>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
         {/* Timezone */}
         <Card>
           <CardHeader>
