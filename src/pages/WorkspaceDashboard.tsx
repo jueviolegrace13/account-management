@@ -13,6 +13,8 @@ import { getWorkspaceAccounts, createWorkspace, deleteAccount } from '../lib/dat
 import { useAuth } from '../contexts/AuthContext';
 import { useWorkspaces } from '../contexts/WorkspaceContext';
 
+const SELECTED_WORKSPACE_KEY = 'selectedWorkspaceId';
+
 const WorkspaceDashboard: React.FC = () => {
   const { user } = useAuth();
   const { workspaces, loading: workspacesLoading, error: workspacesError, reload: reloadWorkspaces } = useWorkspaces();
@@ -30,7 +32,13 @@ const WorkspaceDashboard: React.FC = () => {
   // Set initial workspace when workspaces are loaded
   useEffect(() => {
     if (workspaces && workspaces.length > 0) {
-      setSelectedWorkspace(workspaces[0]);
+      const storedId = localStorage.getItem(SELECTED_WORKSPACE_KEY);
+      if (storedId) {
+        const found = workspaces.find(ws => ws.id === storedId);
+        setSelectedWorkspace(found || workspaces[0]);
+      } else {
+        setSelectedWorkspace(workspaces[0]);
+      }
     } else {
       setSelectedWorkspace(null);
     }
@@ -111,12 +119,6 @@ const WorkspaceDashboard: React.FC = () => {
     setEditingAccount(account);
     setShowAccountForm(true);
     setViewingAccount(null);
-  };
-
-  const handleBackToList = () => {
-    setViewingAccount(null);
-    setEditingAccount(null);
-    setShowAccountForm(false);
   };
 
   const isWorkspaceOwner = selectedWorkspace && user && selectedWorkspace.owner_id === user.id;
@@ -251,7 +253,6 @@ const WorkspaceDashboard: React.FC = () => {
           <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
             <AccountDetail
               account={viewingAccount}
-              onBack={handleBackToList}
               onEdit={() => handleEditAccount(viewingAccount)}
               onAccountUpdate={loadWorkspaceAccounts}
             />

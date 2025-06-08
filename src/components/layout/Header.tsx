@@ -7,22 +7,34 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import WorkspaceSelector from '../workspaces/WorkspaceSelector';
 import { useWorkspaces } from '../../contexts/WorkspaceContext';
+import { Workspace } from '../../types';
 
 interface HeaderProps {
   toggleSidebar: () => void;
   sidebarOpen: boolean;
 }
 
+const SELECTED_WORKSPACE_KEY = 'selectedWorkspaceId';
+
 const Header: React.FC<HeaderProps> = ({ toggleSidebar, sidebarOpen }) => {
   const [theme, setTheme] = React.useState<'light' | 'dark'>(getUserSettings().theme);
   const { user } = useAuth();
   const navigate = useNavigate();
   const { workspaces } = useWorkspaces();
-  const [selectedWorkspace, setSelectedWorkspace] = React.useState(workspaces[0] || null);
+  const [selectedWorkspace, setSelectedWorkspace] = React.useState(() => {
+    const storedId = localStorage.getItem(SELECTED_WORKSPACE_KEY);
+    return workspaces.find(ws => ws.id === storedId) || workspaces[0] || null;
+  });
 
   React.useEffect(() => {
-    if (workspaces.length > 0 && !selectedWorkspace) {
-      setSelectedWorkspace(workspaces[0]);
+    const storedId = localStorage.getItem(SELECTED_WORKSPACE_KEY);
+    if (workspaces.length > 0) {
+      if (storedId) {
+        const found = workspaces.find(ws => ws.id === storedId);
+        setSelectedWorkspace(found || workspaces[0]);
+      } else {
+        setSelectedWorkspace(workspaces[0]);
+      }
     }
   }, [workspaces]);
 
@@ -39,6 +51,13 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar, sidebarOpen }) => {
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     navigate('/');
+  };
+
+  const handleWorkspaceSelect = (workspace: Workspace) => {
+    setSelectedWorkspace(workspace);
+    localStorage.setItem(SELECTED_WORKSPACE_KEY, workspace.id);
+    navigate('/dashboard');
+    window.location.reload();
   };
 
   return (
@@ -64,7 +83,7 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar, sidebarOpen }) => {
           <div className="w-56">
             <WorkspaceSelector
               selectedWorkspace={selectedWorkspace}
-              onWorkspaceSelect={setSelectedWorkspace}
+              onWorkspaceSelect={handleWorkspaceSelect}
               onCreateWorkspace={() => {}}
             />
           </div>
