@@ -25,36 +25,17 @@ serve(async (req) => {
 			throw new Error('Method not allowed');
 		}
 
-		const { to, subject, template, data } = await req.json();
+		const { to, subject, html, data } = await req.json();
 
 		// Validate required fields
-		if (!to || !subject || !template) {
-			throw new Error('Missing required fields: to, subject, and template are required');
+		if (!to || !subject || !html) {
+			throw new Error('Missing required fields: to, subject, and html are required');
 		}
 
 		// Validate email format
 		const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 		if (!emailRegex.test(to)) {
 			throw new Error('Invalid email format');
-		}
-
-		// Load email template
-		const templatePath = new URL(`../email-templates/${template}.html`, import.meta.url);
-		let templateContent;
-		try {
-			templateContent = await Deno.readTextFile(templatePath);
-		} catch (error) {
-			throw new Error(`Template not found: ${template}`);
-		}
-
-		// Replace template variables
-		if (data) {
-			Object.entries(data).forEach(([key, value]) => {
-				templateContent = templateContent.replace(
-					new RegExp(`{{${key}}}`, 'g'),
-					String(value)
-				);
-			});
 		}
 
 		// Configure SMTP client
@@ -73,8 +54,8 @@ serve(async (req) => {
 				from: env['SMTP_FROM_EMAIL'],
 				to,
 				subject,
-				content: templateContent,
-				html: templateContent,
+				content: html,
+				html: html,
 			});
 
 			await client.close();

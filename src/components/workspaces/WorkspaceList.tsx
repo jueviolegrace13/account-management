@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Plus } from 'lucide-react';
 import Button from '../ui/Button';
-import { supabase } from '../../lib/supabase';
 import { Workspace } from '../../types';
+import { getWorkspaces } from '../../lib/database';
 
 interface WorkspaceListProps {
   onSelectWorkspace: (workspace: Workspace) => void;
@@ -23,13 +23,8 @@ const WorkspaceList: React.FC<WorkspaceListProps> = ({
 
   const fetchWorkspaces = async () => {
     try {
-      const { data, error } = await supabase
-        .from('workspaces')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setWorkspaces(data || []);
+      const data = await getWorkspaces();
+      setWorkspaces(data);
     } catch (err) {
       console.error('Error fetching workspaces:', err);
       setError('Failed to load workspaces');

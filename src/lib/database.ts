@@ -14,7 +14,11 @@ export const createWorkspace = async (name: string) => {
 };
 
 export const getWorkspaces = async () => {
-  const { data, error } = await supabase
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('User not authenticated');
+
+  // 1. Workspaces where user is owner
+  const { data: owned, error: ownedError } = await supabase
     .from('workspaces')
     .select(`
       *,
@@ -23,10 +27,32 @@ export const getWorkspaces = async () => {
         user_id
       )
     `)
-    .order('created_at', { ascending: false });
+    .eq('owner_id', user.id);
 
-  if (error) throw error;
-  return data as unknown as Workspace[];
+  if (ownedError) throw ownedError;
+
+  // 2. Workspaces where user is a member
+  const { data: member, error: memberError } = await supabase
+    .from('workspaces')
+    .select(`
+      *,
+      workspace_members (
+        *,
+        user_id
+      )
+    `)
+    .filter('workspace_members.user_id', 'eq', user.id);
+
+  if (memberError) throw memberError;
+
+  // 3. Merge and deduplicate
+  const all = [...(owned || []), ...(member || [])];
+  const unique = Array.from(new Map(all.map(ws => [ws.id, ws])).values());
+
+  // Optionally, sort by created_at descending
+  unique.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+  return unique as Workspace[];
 };
 
 
