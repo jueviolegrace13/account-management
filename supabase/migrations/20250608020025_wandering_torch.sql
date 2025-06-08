@@ -12,9 +12,17 @@
 */
 
 -- Drop existing policies to recreate them properly
+-- Drop existing policies to recreate them properly
 DROP POLICY IF EXISTS "Users can manage their own accounts" ON public.accounts;
+DROP POLICY IF EXISTS "Users can view accounts in their workspaces" ON public.accounts;
+DROP POLICY IF EXISTS "Workspace owners can manage accounts" ON public.accounts;
 DROP POLICY IF EXISTS "Users can manage notes for their accounts" ON public.notes;
+DROP POLICY IF EXISTS "Users can view notes for accounts they have access to" ON public.notes;
+DROP POLICY IF EXISTS "Users can manage notes for accounts they have access to" ON public.notes;
 DROP POLICY IF EXISTS "Users can manage their own reminders" ON public.reminders;
+DROP POLICY IF EXISTS "Users can view reminders for accounts they have access to" ON public.reminders;
+DROP POLICY IF EXISTS "Users can manage reminders for accounts they have access to" ON public.reminders;
+
 
 -- Update accounts policies
 CREATE POLICY "Users can manage their own accounts"
