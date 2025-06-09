@@ -13,12 +13,9 @@ import { getWorkspaceAccounts, createWorkspace, deleteAccount } from '../lib/dat
 import { useAuth } from '../contexts/AuthContext';
 import { useWorkspaces } from '../contexts/WorkspaceContext';
 
-const SELECTED_WORKSPACE_KEY = 'selectedWorkspaceId';
-
 const WorkspaceDashboard: React.FC = () => {
   const { user } = useAuth();
-  const { workspaces, loading: workspacesLoading, error: workspacesError, reload: reloadWorkspaces } = useWorkspaces();
-  const [selectedWorkspace, setSelectedWorkspace] = useState<Workspace | null>(null);
+  const { workspaces, selectedWorkspace, loading: workspacesLoading, error: workspacesError, reload: reloadWorkspaces } = useWorkspaces();
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [showWorkspaceForm, setShowWorkspaceForm] = useState(false);
   const [showAccountForm, setShowAccountForm] = useState(false);
@@ -28,16 +25,6 @@ const WorkspaceDashboard: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Set initial workspace when workspaces are loaded
-  useEffect(() => {
-    if (workspaces && workspaces.length > 0) {
-      setSelectedWorkspace(workspaces[0]);
-      localStorage.setItem(SELECTED_WORKSPACE_KEY, workspaces[0].id);
-    } else {
-      setSelectedWorkspace(null);
-    }
-  }, [workspaces]);
-
   // Load accounts when selectedWorkspace changes
   useEffect(() => {
     if (selectedWorkspace) {
@@ -45,7 +32,6 @@ const WorkspaceDashboard: React.FC = () => {
     } else {
       setAccounts([]);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedWorkspace]);
 
   // If the current route is /dashboard/account/:id, render nothing (the Outlet will render the account page)
@@ -100,7 +86,6 @@ const WorkspaceDashboard: React.FC = () => {
     }
   };
 
-  // Change: navigate to /account/:id instead of opening modal
   const handleViewAccount = (account: Account) => {
     navigate(`/dashboard/account/${account.id}`);
   };

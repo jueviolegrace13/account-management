@@ -13,28 +13,10 @@ interface HeaderProps {
   sidebarOpen: boolean;
 }
 
-const SELECTED_WORKSPACE_KEY = 'selectedWorkspaceId';
-
 const Header: React.FC<HeaderProps> = ({ toggleSidebar, sidebarOpen }) => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { workspaces } = useWorkspaces();
-  const [selectedWorkspace, setSelectedWorkspace] = React.useState(() => {
-    const storedId = localStorage.getItem(SELECTED_WORKSPACE_KEY);
-    return workspaces.find(ws => ws.id === storedId) || workspaces[0] || null;
-  });
-
-  React.useEffect(() => {
-    const storedId = localStorage.getItem(SELECTED_WORKSPACE_KEY);
-    if (workspaces.length > 0) {
-      if (storedId) {
-        const found = workspaces.find(ws => ws.id === storedId);
-        setSelectedWorkspace(found || workspaces[0]);
-      } else {
-        setSelectedWorkspace(workspaces[0]);
-      }
-    }
-  }, [workspaces]);
+  const { selectedWorkspace, selectWorkspace } = useWorkspaces();
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -42,10 +24,8 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar, sidebarOpen }) => {
   };
 
   const handleWorkspaceSelect = (workspace: Workspace) => {
-    setSelectedWorkspace(workspace);
-    localStorage.setItem(SELECTED_WORKSPACE_KEY, workspace.id);
+    selectWorkspace(workspace);
     navigate('/dashboard');
-    window.location.reload();
   };
 
   return (

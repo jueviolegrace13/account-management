@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Save, Trash, AlertTriangle, Search } from 'lucide-react';
+import { Save, Trash, AlertTriangle, Search, Edit2 } from 'lucide-react';
 import DashboardHeader from '../components/dashboard/DashboardHeader';
 import Button from '../components/ui/Button';
 import Card, { CardContent, CardHeader, CardTitle, CardFooter } from '../components/ui/Card';
@@ -8,29 +8,32 @@ import { useWorkspaces } from '../contexts/WorkspaceContext';
 import { getTimeZones } from '../utils/helpers';
 import PortalDropdown from '../components/ui/PortalDropdown';
 import { updateWorkspace } from '../lib/database';
+import { useAuth } from '../contexts/AuthContext';
 
 const Settings: React.FC = () => {
+  const { user } = useAuth();
   const [timezone, setTimezone] = useState<string>(getUserSettings().timezone);
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [timezoneSearch, setTimezoneSearch] = useState('');
   const [isTimezoneOpen, setIsTimezoneOpen] = useState(false);
-  const { workspaces, reload } = useWorkspaces();
+  const { workspaces, selectedWorkspace, reload } = useWorkspaces();
   const timezoneAnchorRef = React.useRef<HTMLDivElement>(null);
   const [savingTimezone, setSavingTimezone] = useState(false);
   const [timezoneSaved, setTimezoneSaved] = useState(false);
   const [theme, setTheme] = useState<'light' | 'dark'>(getUserSettings().theme);
   const [themeSaved, setThemeSaved] = useState(false);
+  const [workspaceName, setWorkspaceName] = useState(selectedWorkspace?.name || '');
+  const [isEditingWorkspaceName, setIsEditingWorkspaceName] = useState(false);
+  const [savingWorkspaceName, setSavingWorkspaceName] = useState(false);
+  const [workspaceNameSaved, setWorkspaceNameSaved] = useState(false);
 
   const timezones = getTimeZones();
   const filteredTimezones = timezones.filter(tz => 
     tz.toLowerCase().includes(timezoneSearch.toLowerCase())
   );
 
-  // Get selected workspace from localStorage and workspaces
-  const SELECTED_WORKSPACE_KEY = 'selectedWorkspaceId';
-  const selectedWorkspaceId = typeof window !== 'undefined' ? localStorage.getItem(SELECTED_WORKSPACE_KEY) : null;
-  const selectedWorkspace = workspaces.find(ws => ws.id === selectedWorkspaceId) || workspaces[0];
+  const isWorkspaceOwner = selectedWorkspace && user && selectedWorkspace.owner_id === user.id;
 
   const handleTimezoneChange = (newTimezone: string) => {
     setTimezone(newTimezone);
@@ -170,6 +173,25 @@ const Settings: React.FC = () => {
     setTimeout(() => setThemeSaved(false), 2000);
   };
 
+  const handleSaveWorkspaceName = async () => {
+    if (!selectedWorkspace || !isWorkspaceOwner) return;
+    
+    setSavingWorkspaceName(true);
+    setWorkspaceNameSaved(false);
+    try {
+      await updateWorkspace(selectedWorkspace.id, { name: workspaceName });
+      setWorkspaceNameSaved(true);
+      reload();
+      setIsEditingWorkspaceName(false);
+    } catch (error) {
+      console.error('Error updating workspace name:', error);
+      alert('Failed to update workspace name. Please try again.');
+    } finally {
+      setSavingWorkspaceName(false);
+      setTimeout(() => setWorkspaceNameSaved(false), 2000);
+    }
+  };
+
   return (
     <div>
       <DashboardHeader 
@@ -178,6 +200,70 @@ const Settings: React.FC = () => {
       />
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Workspace Settings - Only visible to workspace owner */}
+        {isWorkspaceOwner && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Workspace Settings</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col space-y-4">
+                <div>
+                  <h3 className="text-lg font-medium">Workspace Name</h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    Update your workspace name
+                  </p>
+                </div>
+                <div className="flex items-center space-x-2">
+                  {isEditingWorkspaceName ? (
+                    <>
+                      <input
+                        type="text"
+                        value={workspaceName}
+                        onChange={(e) => setWorkspaceName(e.target.value)}
+                        className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                        placeholder="Enter workspace name"
+                      />
+                      <Button
+                        variant="primary"
+                        onClick={handleSaveWorkspaceName}
+                        disabled={savingWorkspaceName}
+                      >
+                        {savingWorkspaceName ? 'Saving...' : 'Save'}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          setIsEditingWorkspaceName(false);
+                          setWorkspaceName(selectedWorkspace?.name || '');
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <span className="flex-1 px-3 py-2 bg-gray-50 dark:bg-gray-700 rounded-md">
+                        {workspaceName}
+                      </span>
+                      <Button
+                        variant="outline"
+                        onClick={() => setIsEditingWorkspaceName(true)}
+                      >
+                        <Edit2 size={16} className="mr-2" />
+                        Edit
+                      </Button>
+                    </>
+                  )}
+                </div>
+                {workspaceNameSaved && (
+                  <span className="text-green-600 dark:text-green-400 text-sm">Workspace name updated successfully!</span>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Theme Selector */}
         <Card>
           <CardHeader>
